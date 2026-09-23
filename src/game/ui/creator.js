@@ -9,13 +9,15 @@ import { petSprite, PET_KINDS, PET_COATS } from "../art/animals.js";
 import { toSvg } from "../art/cozy-kit.js";
 import { logoSvg } from "../art/brand.js";
 import { DEFAULT_PROFILE, save } from "../state.js";
+import { seasonName } from "../rules/clock.js";
 
 const PET_NAMES = { anatolian: "Luna", dog: "Biscuit", cat: "Mochi", bird: "Pip", sawpup: "Sawyer" };
 const KIND_LABEL = { anatolian: "Anatolian", dog: "Pup", cat: "Cat", bird: "Bird", sawpup: "Chainsaw Pup" };
 const LABEL = { short: "Short", bob: "Bob", long: "Long", ponytail: "Ponytail", buns: "Buns", curly: "Curly", none: "None", straw: "Straw hat", beanie: "Beanie", cap: "Cap", flower: "Flower crown" };
 
 export function showTitle(root, { onNew, onContinue }) {
-  const hasSave = !!save.load();
+  const data = save.load();
+  const hasSave = !!data;
   const el = h(
     "div.title",
     {},
@@ -23,7 +25,9 @@ export function showTitle(root, { onNew, onContinue }) {
     h(
       "div.menu",
       {},
-      hasSave ? h("button.btn.primary.big", { onclick: () => (el.remove(), onContinue()) }, "Continue") : null,
+      hasSave
+        ? h("button.btn.primary.big.continue", { onclick: () => (el.remove(), onContinue()) }, "Continue", h("small", {}, `${data.profile.name} · ${seasonName(data.clock.season)} ${data.clock.day}, Year ${data.clock.year}`))
+        : null,
       h("button.btn.big" + (hasSave ? "" : ".primary"), { onclick: () => (el.remove(), showCreator(root, onNew)) }, "New Game"),
       h("p.dedication", {}, "for Luna ♡"),
     ),

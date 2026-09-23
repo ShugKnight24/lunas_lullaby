@@ -81,6 +81,14 @@ function title() {
 }
 ui.onQuit = title;
 
+// Leaving the page (refresh, tab close, app switch) saves the day so far, so
+// Continue resumes where you were rather than at the last night's sleep.
+// The title and creator run on a blank placeholder state, which must never
+// overwrite a real save.
+const saveOnLeave = () => g.mode !== "title" && writeSave(g);
+addEventListener("pagehide", saveOnLeave);
+document.addEventListener("visibilitychange", () => document.hidden && saveOnLeave());
+
 startLoop(canvas, {
   update(dt, t) {
     update(g, dt, t);

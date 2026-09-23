@@ -265,6 +265,7 @@ kbd { font: 600 13px var(--display); min-width: 140px; text-align: center; backg
 .logo .brand-mark { animation: bob 3s ease-in-out infinite; }
 .logo p { font: 600 22px var(--display); color: var(--ink); background: var(--cream); display: inline-block; padding: 4px 16px; border-radius: 14px; border: 2.5px solid var(--ink); margin-top: 14px; }
 .menu { display: flex; flex-direction: column; gap: 14px; min-width: 240px; }
+.btn.continue small { display: block; font: 700 13px var(--body); opacity: .85; margin-top: 2px; }
 .foot { position: absolute; bottom: 18px; font-weight: 700; color: var(--cream); text-shadow: 0 2px 0 var(--ink); }
 
 /* ── Creator ── */
