@@ -34,7 +34,7 @@ Build mode opens from Theo's board by the carpenter shop, or from his workbench 
 
 *Luna's Lullaby* is dedicated to Luna. She's the default companion, and the story is hers: a new game opens in a starry dream where your companion asks to see you live the life you always talked about, and promises to stay beside you every step. **Journal → Wishes** tracks eight milestones your companion is waiting to see (a first harvest, a friend in town, the Moonfish, making the Hollow home…); each one that comes true is revealed on that night's summary card, and when all eight have, one last dream plays. Some nights the summary also says what your companion dreamed about.
 
-Companions: dog (Luna by default), cat, bird, or Pochita, the little chainsaw devil-dog. The story lines use whatever name you give yours.
+Companions: an Anatolian shepherd (Luna, drawn from her photos, and the default), a pup, a cat, a bird, or Sawyer the chainsaw pup. The story lines use whatever name you give yours.
 
 ## First day
 

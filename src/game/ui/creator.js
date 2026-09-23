@@ -9,8 +9,8 @@ import { petSprite, PET_KINDS, PET_COATS } from "../art/animals.js";
 import { toSvg } from "../art/cozy-kit.js";
 import { DEFAULT_PROFILE, save } from "../state.js";
 
-const PET_NAMES = { dog: "Luna", cat: "Mochi", bird: "Pip", pochita: "Pochita" };
-const KIND_LABEL = { dog: "Dog", cat: "Cat", bird: "Bird", pochita: "Pochita" };
+const PET_NAMES = { anatolian: "Luna", dog: "Biscuit", cat: "Mochi", bird: "Pip", sawpup: "Sawyer" };
+const KIND_LABEL = { anatolian: "Anatolian", dog: "Pup", cat: "Cat", bird: "Bird", sawpup: "Chainsaw Pup" };
 const LABEL = { short: "Short", bob: "Bob", long: "Long", ponytail: "Ponytail", buns: "Buns", curly: "Curly", none: "None", straw: "Straw hat", beanie: "Beanie", cap: "Cap", flower: "Flower crown" };
 
 export function showTitle(root, { onNew, onContinue }) {

@@ -9,12 +9,18 @@ const V1 = JSON.parse(readFileSync(new URL("../fixtures/save-v1.json", import.me
 
 describe("companion", () => {
   it("Luna is the default companion", () => {
-    expect(DEFAULT_PROFILE.pet).toMatchObject({ kind: "dog", name: "Luna" });
+    expect(DEFAULT_PROFILE.pet).toMatchObject({ kind: "anatolian", name: "Luna" });
   });
 
-  it("Pochita is a selectable companion with every frame drawable", () => {
-    expect(PET_KINDS).toContain("pochita");
-    for (let f = 0; f < 4; f++) expect(petSprite("pochita", PET_COATS.pochita[0], f).layers.length).toBeGreaterThan(0);
+  it("every companion kind draws all four frames", () => {
+    expect(PET_KINDS).toEqual(["anatolian", "dog", "cat", "bird", "sawpup"]);
+    for (const k of PET_KINDS) for (let f = 0; f < 4; f++) expect(petSprite(k, PET_COATS[k][0], f).layers.length).toBeGreaterThan(0);
+  });
+
+  it("an old Pochita companion becomes Sawyer (a custom name is kept)", () => {
+    const withPet = (pet) => migrateSave({ ...structuredClone(V1), v: 7, profile: { ...V1.profile, pet } }).profile.pet;
+    expect(withPet({ kind: "pochita", coat: "#f08a3a", name: "Pochita" })).toEqual({ kind: "sawpup", coat: "#f08a3a", name: "Sawyer" });
+    expect(withPet({ kind: "pochita", coat: "#f08a3a", name: "Chompy" }).name).toBe("Chompy");
   });
 
   it("the story names the companion, never a fixed one", () => {

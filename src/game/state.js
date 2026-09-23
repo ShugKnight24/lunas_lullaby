@@ -16,7 +16,7 @@ import { addItem } from "./rules/inventory.js";
 import { VILLAGER_IDS } from "./data/villagers.js";
 import { PLAYER_START, HORSE_START, FARM_WELL } from "./world/map.js";
 
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 
 /** `MIGRATIONS[n]` upgrades a v(n) save to v(n+1). */
 export const MIGRATIONS = {
@@ -37,6 +37,12 @@ export const MIGRATIONS = {
   5: (d) => ({ ...d, professions: {} }),
   // v7: your companion's wishes, and harvest counts they're measured by.
   6: (d) => ({ ...d, dreams: {}, stats: { harvested: {}, ...d.stats }, flags: { finale: false, ...d.flags } }),
+  // v8: the chainsaw companion is Sawyer now (an original name).
+  7: (d) => {
+    const pet = d.profile.pet;
+    if (pet.kind !== "pochita") return d;
+    return { ...d, profile: { ...d.profile, pet: { ...pet, kind: "sawpup", name: pet.name === "Pochita" ? "Sawyer" : pet.name } } };
+  },
 };
 
 /** Remove structures and soil on the farm well's paving, refunding what was built. */
@@ -65,7 +71,7 @@ export const DEFAULT_PROFILE = {
   name: "Sol",
   farm: "Moonpetal Farm",
   look: { skin: 1, hair: "ponytail", hairColor: "#b0603a", eyes: "#3f6fb0", top: "#f4a6b8", bottom: "#5a6e9a", hat: "straw" },
-  pet: { kind: "dog", coat: "#d9a066", name: "Luna" },
+  pet: { kind: "anatolian", coat: "#c8965a", name: "Luna" },
 };
 
 export function newState(profile = DEFAULT_PROFILE, seed = 7) {
