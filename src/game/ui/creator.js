@@ -7,6 +7,7 @@ import { h } from "./panels.js";
 import { personSvg, SKINS, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, HATS, OUTFIT_COLORS } from "../art/person.js";
 import { petSprite, PET_KINDS, PET_COATS } from "../art/animals.js";
 import { toSvg } from "../art/cozy-kit.js";
+import { logoSvg } from "../art/brand.js";
 import { DEFAULT_PROFILE, save } from "../state.js";
 
 const PET_NAMES = { anatolian: "Luna", dog: "Biscuit", cat: "Mochi", bird: "Pip", sawpup: "Sawyer" };
@@ -18,7 +19,7 @@ export function showTitle(root, { onNew, onContinue }) {
   const el = h(
     "div.title",
     {},
-    h("div.logo", {}, h("span.moon", { html: "&#9790;" }), h("h1", {}, "Luna's Lullaby"), h("p", {}, "a cozy little farming life")),
+    h("div.logo", {}, h("h1", { html: logoSvg("horizontal", { tag: false }) }), h("p", {}, "a cozy little farming life")),
     h(
       "div.menu",
       {},

@@ -260,13 +260,10 @@ kbd { font: 600 13px var(--display); min-width: 140px; text-align: center; backg
   background: radial-gradient(ellipse at 50% 40%, rgba(255,246,230,.55), rgba(255,220,230,.25) 55%, rgba(44,28,38,.35));
 }
 .logo { text-align: center; }
-.logo h1 {
-  font: 700 clamp(48px, 9vw, 96px)/1 var(--display); margin: 0; color: var(--cream);
-  -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill; text-shadow: 0 8px 0 var(--shadow);
-  letter-spacing: 1px;
-}
+.logo h1 { margin: 0; line-height: 0; }
+.logo h1 svg { width: min(760px, 92vw); height: auto; filter: drop-shadow(0 6px 0 var(--shadow)); }
+.logo .brand-mark { animation: bob 3s ease-in-out infinite; }
 .logo p { font: 600 22px var(--display); color: var(--ink); background: var(--cream); display: inline-block; padding: 4px 16px; border-radius: 14px; border: 2.5px solid var(--ink); margin-top: 14px; }
-.moon { display: block; font-size: 56px; color: #ffe08a; -webkit-text-stroke: 3px var(--ink); animation: bob 3s ease-in-out infinite; }
 .menu { display: flex; flex-direction: column; gap: 14px; min-width: 240px; }
 .foot { position: absolute; bottom: 18px; font-weight: 700; color: var(--cream); text-shadow: 0 2px 0 var(--ink); }
 

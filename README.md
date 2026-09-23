@@ -1,6 +1,6 @@
 # Luna's Lullaby
 
-A cozy farming and life sim for the browser. You grow crops, build up your farm, make friends in town, and ride your horse around with your pet. Everything you see is SVG generated in code at runtime and rasterised to cached bitmaps. There are no image files. The drawing uses a warm plum ink with soft cel shading.
+A cozy farming and life sim for the browser. You grow crops, build up your farm, make friends in town, and ride your horse around with your pet. Everything you see is SVG generated in code at runtime and rasterised to cached bitmaps. The only image files are the favicon and app icons, and those are exported from the same code (see Branding). The drawing uses a warm plum ink with soft cel shading.
 
 ## Run
 
@@ -13,6 +13,10 @@ npm run build    # production bundle in dist/
 ```
 
 If Playwright's bundled browser isn't installed, point `CHROME_PATH` at a local Chrome for `test:e2e` and `shot`. Headless screenshot of the running dev server: `node scripts/shot.mjs http://localhost:3200/ shots/x.png 2000`.
+
+## Branding
+
+The logo (Luna asleep in a crescent-moon cradle, plus a sticker wordmark) lives in `src/game/art/brand.js`, and the title screen draws it from there. The letters are Fredoka Bold outlines baked into `src/game/art/brand-glyphs.js` by `node scripts/brand-glyphs.mjs`, so no font is needed to render them. `npm run brand` exports the lockups to `public/brand/`, the favicon (`public/favicon.svg`, `public/favicon.ico`), the app icons and `site.webmanifest`, plus a contact sheet at `branding/sheet.html`. It uses Playwright's Chromium, or `CHROME_PATH`.
 
 ## CI and deploy
 
