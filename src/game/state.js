@@ -16,7 +16,7 @@ import { addItem } from "./rules/inventory.js";
 import { VILLAGER_IDS } from "./data/villagers.js";
 import { PLAYER_START, HORSE_START, FARM_WELL } from "./world/map.js";
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 /** `MIGRATIONS[n]` upgrades a v(n) save to v(n+1). */
 export const MIGRATIONS = {
@@ -31,6 +31,8 @@ export const MIGRATIONS = {
   // v4: skills, the tutorial (already-played saves skip it and the intro), and
   // the new farm well's paving cleared of anything built or tilled there.
   3: (d) => clearFarmWell({ ...d, skills: newSkills(), tutorial: { step: 0, done: true }, flags: { ...d.flags, intro: true } }),
+  // v5: villagers added since (Bram) get a fresh relationship.
+  4: (d) => ({ ...d, rel: { ...Object.fromEntries(VILLAGER_IDS.map((id) => [id, { ...newRel(), met: false }])), ...d.rel } }),
 };
 
 /** Remove structures and soil on the farm well's paving, refunding what was built. */

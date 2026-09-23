@@ -14,6 +14,7 @@ import { QUALITY } from "./rules/quality.js";
 import { toolEnergy, fishingZone, XP } from "./rules/skills.js";
 import { award, level } from "./progress.js";
 import { give } from "./actions.js";
+import { removeItem } from "./rules/inventory.js";
 import { setEnergy } from "./game.js";
 import { burst, FXK } from "./world/weather.js";
 import { toast } from "./ui/hud.js";
@@ -43,6 +44,9 @@ export function startFishing(g) {
   f.fish = pickFish(pool, Math.random());
   const bar = barParams(f.fish ? FISH[f.fish].diff : 0, fishingZone(level(g, "fishing")));
   f.wait = 1.2 + Math.random() * 2.4 + (f.fish ? 0 : 2.5);
+  // Bait in the bag is used up one per cast and halves the wait.
+  f.bait = f.fish && removeItem(s.inv, "bait", 1);
+  if (f.bait) f.wait *= 0.5;
   f.pos = 0;
   f.vel = bar.vel * (0.9 + Math.random() * 0.2);
   f.zoneW = bar.zoneW;

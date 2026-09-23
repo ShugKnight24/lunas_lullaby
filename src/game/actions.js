@@ -491,10 +491,10 @@ function chat(g, v) {
     if (r.delta > 0) burst(FXK.HEART, v.x, v.y - 50, r.taste === "love" ? 6 : 3, 40, 1.2);
     return g.ui.dialogue(v, [GIFT_LINES[v.id][r.taste]]);
   }
-  const ev = HEART_EVENTS[v.id];
-  if (eventReady(rel, ev)) {
+  const ev = (HEART_EVENTS[v.id] ?? []).find((e) => eventReady(rel, e));
+  if (ev) {
     g.s.rel[v.id] = { ...rel, events: { ...rel.events, [ev.hearts]: true } };
-    return g.ui.dialogue(v, ev.lines.map((l) => fillLine(l, vars)), () => give(g, ev.reward, 1, p.x, p.y), true);
+    return g.ui.dialogue(v, ev.lines.map((l) => fillLine(l, vars)), () => ev.reward && give(g, ev.reward, ev.n ?? 1, p.x, p.y), true);
   }
   const ctx = { season: g.s.clock.season, weather: g.s.weather, hearts: hearts(rel), day: d, met: rel.met };
   const line = fillLine(pickLine(LINES[v.id], ctx), vars);

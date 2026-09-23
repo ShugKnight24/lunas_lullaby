@@ -42,7 +42,11 @@ export const WAYPOINTS = {
   cabin_in: { level: "cabin", tx: 4, ty: 3 },
   cabin_door: { level: "world", tx: 86, ty: 28 },
   pier_end: { level: "world", tx: 87, ty: 46 },
-  bridge: { level: "world", tx: 78, ty: 35 },
+  bridge: { level: "world", tx: 77, ty: 34 }, // on the deck (row 35 is river)
+  bakery_nook: { level: "bakery", tx: 10, ty: 6 },
+  plaza_bench2: { level: "world", tx: 55, ty: 30 },
+  plaza_market: { level: "world", tx: 51, ty: 37 },
+  meadow_path: { level: "world", tx: 60, ty: 50 },
 };
 
 export const PLAYER_START = { tx: 8, ty: 11 };

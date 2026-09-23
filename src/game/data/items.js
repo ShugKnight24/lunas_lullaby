@@ -44,6 +44,7 @@ export const ITEMS = {
   egg: { name: "Egg", kind: "animal", sell: 50 },
   fertilizer: { name: "Basic Fertilizer", kind: "fertilizer", tier: 1, price: 30, tip: "Better crop quality · use on tilled soil" },
   deluxe_fertilizer: { name: "Deluxe Fertilizer", kind: "fertilizer", tier: 2, price: 90, tip: "Much better crop quality · use on tilled soil" },
+  bait: { name: "Bait", kind: "tackle", sell: 1, tip: "Fish bite sooner · used up one per cast from your bag" },
   hay: { name: "Hay", kind: "feed", price: 20, tip: "Chicken feed · stock it at the coop" },
 
   wood: { name: "Wood", kind: "resource", sell: 2 },

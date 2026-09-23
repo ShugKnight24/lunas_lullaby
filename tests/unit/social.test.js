@@ -34,7 +34,7 @@ describe("relationships", () => {
   });
 
   it("heart event becomes ready at two hearts, once", () => {
-    const ev = HEART_EVENTS.mira;
+    const ev = HEART_EVENTS.mira[0];
     expect(eventReady({ ...newRel(), pts: 199 }, ev)).toBe(false);
     expect(eventReady({ ...newRel(), pts: 200 }, ev)).toBe(true);
     expect(eventReady({ ...newRel(), pts: 250, events: { 2: true } }, ev)).toBe(false);

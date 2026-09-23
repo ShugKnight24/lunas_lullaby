@@ -12,6 +12,7 @@ import { moveBox, boxFree } from "../world/collide.js";
 import { findPath } from "../world/path.js";
 import { WAYPOINTS, BUILDING_SPOTS, INTERIORS } from "../world/map.js";
 import { BUILDINGS } from "../art/props.js";
+import { scheduleFor, waypointAt } from "../rules/schedule.js";
 
 const OPT = { alpha: 1, flip: false, cap: 512 };
 const WALK_CYCLE = [1, 0, 2, 0];
@@ -259,12 +260,8 @@ export function createVillager(id, def) {
   return { id, def, level: "world", x: 0, y: 0, dir: "down", walkT: 0, moving: false, path: null, pi: 0, goal: "", hop: null, pause: 0, frames: personFrames(def.look, `v${id}`) };
 }
 
-export function currentWaypoint(def, min) {
-  const sch = def.schedule;
-  let wp = sch[0][1];
-  for (let i = 0; i < sch.length; i++) if (min >= sch[i][0]) wp = sch[i][1];
-  return wp;
-}
+/** Where a villager is headed now; `ctx` is `{ weather, weekday }` (see rules/schedule.js). */
+export const currentWaypoint = (def, min, ctx) => waypointAt(scheduleFor(def, ctx), min);
 
 export const doorOf = (levelId) => {
   const b = BUILDING_SPOTS.find((s) => s.interior === levelId);
@@ -273,20 +270,20 @@ export const doorOf = (levelId) => {
 };
 
 /** Put a villager straight at its scheduled waypoint (load / new day). */
-export function placeVillager(v, min) {
-  const wp = WAYPOINTS[currentWaypoint(v.def, min)];
+export function placeVillager(v, min, ctx) {
+  const wp = WAYPOINTS[currentWaypoint(v.def, min, ctx)];
   v.level = wp.level;
   v.x = wp.tx * TILE + TILE / 2;
   v.y = wp.ty * TILE + TILE / 2 + 6;
-  v.goal = currentWaypoint(v.def, min);
+  v.goal = currentWaypoint(v.def, min, ctx);
   v.path = null;
   v.hop = null;
   v.dir = "down";
 }
 
 /** Walk the schedule; `levels` maps id → Level. */
-export function updateVillager(v, min, levels, dt) {
-  const name = currentWaypoint(v.def, min);
+export function updateVillager(v, min, ctx, levels, dt) {
+  const name = currentWaypoint(v.def, min, ctx);
   if (name !== v.goal) {
     v.goal = name;
     v.path = null;

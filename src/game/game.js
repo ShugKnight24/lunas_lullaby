@@ -16,7 +16,7 @@ import { resolveObject, cropKey, cropSpr, DEFS } from "./art/index.js";
 import { warmSvgSprites } from "../engine/sprite.js";
 import { visualStage } from "./rules/crops.js";
 import { createPlayer, createPet, createVillager, createChicken, movePlayer, updatePet, teleportPet, updateVillager, placeVillager, updateChicken, facingTile } from "./actors/actors.js";
-import { tick, dayIndex } from "./rules/clock.js";
+import { tick, dayIndex, weekday } from "./rules/clock.js";
 import { endDay, respawnForage } from "./rules/day.js";
 import { CROPS } from "./data/crops.js";
 import { ITEMS } from "./data/items.js";
@@ -99,7 +99,7 @@ export function loadState(g, s) {
   g.pet = createPet(s.profile.pet);
   g.horse = { x: s.horse.x, y: s.horse.y, dir: s.horse.dir, level: s.horse.level };
   g.villagers = VILLAGER_IDS.map((id) => createVillager(id, VILLAGERS[id]));
-  for (const v of g.villagers) placeVillager(v, s.clock.min);
+  for (const v of g.villagers) placeVillager(v, s.clock.min, routineCtx(s));
   g.lv = g.levels[s.player.level] ?? world;
   teleportPet(g.pet, g.player, g.lv);
   resolveSeason(g);
@@ -107,6 +107,9 @@ export function loadState(g, s) {
   g.tickAcc = 0;
   snapCamera(g.cam, g.lv, g.player.x, g.player.y - 20, g.view);
 }
+
+/** What villager routines depend on today. */
+const routineCtx = (s) => ({ weather: s.weather, weekday: weekday(s.clock) });
 
 /** Runtime object for a built structure (coops also bring their chickens). */
 export function addStructureObject(g, st) {
@@ -248,7 +251,7 @@ export function sleep(g, passedOut = false) {
       g.player.dir = "down";
       if (g.horse.level === "world" && g.s.horse.name) placeHorseAtStable(g);
       teleportPet(g.pet, g.player, g.lv);
-      for (const v of g.villagers) placeVillager(v, g.s.clock.min);
+      for (const v of g.villagers) placeVillager(v, g.s.clock.min, routineCtx(g.s));
       snapCamera(g.cam, g.lv, g.player.x, g.player.y - 20, g.view);
       g.tickAcc = 0;
       writeSave(g);
@@ -317,7 +320,7 @@ export function update(g, dt, t) {
     const cy = (30 + Math.cos(g.attract * 0.04) * 6) * TILE;
     g.lv = lv;
     updateCamera(g.cam, lv, cx, cy, g.view, dt * 0.5);
-    for (const v of g.villagers) if (v.level === "world") updateVillager(v, g.s.clock.min, g.levels, dt);
+    for (const v of g.villagers) if (v.level === "world") updateVillager(v, g.s.clock.min, routineCtx(g.s), g.levels, dt);
     return;
   }
 
@@ -368,7 +371,7 @@ export function update(g, dt, t) {
   if (input.pressed("mount")) toggleMount(g);
 
   updatePet(g.pet, p, g.lv, dt, t);
-  for (const v of g.villagers) updateVillager(v, g.s.clock.min, g.levels, dt);
+  for (const v of g.villagers) updateVillager(v, g.s.clock.min, routineCtx(g.s), g.levels, dt);
   if (g.lv.id === "world") for (const c of g.chickens) updateChicken(c, g.lv, dt);
   for (const o of g.lv.objects) if (o.shake > 0) o.shake = Math.max(0, o.shake - dt);
   for (const d of g.cropDraw.values()) if (d.pop > 0) d.pop = Math.max(0, d.pop - dt);
