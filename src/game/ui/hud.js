@@ -11,6 +11,8 @@ import { ITEMS } from "../data/items.js";
 import { timeLabel, weekday, seasonName } from "../rules/clock.js";
 import { QUALITY, qualityName } from "../rules/quality.js";
 import { settle } from "../rules/shipping.js";
+import { qualityBands } from "../rules/fishing.js";
+import { sellMult } from "../rules/skills.js";
 import { TUTORIAL } from "../data/tutorial.js";
 import { FARM_WELL, BIN } from "../world/map.js";
 import { doorOf } from "../actors/actors.js";
@@ -158,7 +160,7 @@ function strings(g) {
   }
   if (g.s.bin !== cache.bin) {
     cache.bin = g.s.bin;
-    const total = settle(g.s.bin, ITEMS).total;
+    const total = settle(g.s.bin, ITEMS, (id) => sellMult(g.s.professions, id, ITEMS[id])).total;
     cache.binS = total ? `+${total.toLocaleString()}g tonight` : "";
   }
   if (g.s.energy !== cache.energy) {
@@ -468,7 +470,8 @@ function drawFishingBar(ctx, g, ox, oy, z, k) {
   ctx.fillRect(bx + 8 + (w - 16) * f.zone, by + 8, (w - 16) * f.zoneW, 10);
   // Silver (middle half) and gold (middle fifth) bands, as in rules/fishing.catchQuality.
   const mid = f.zone + f.zoneW / 2;
-  for (const [k, q] of [[0.5, 1], [0.2, 2]]) {
+  const [goldK, silverK] = qualityBands(f.lucky);
+  for (const [k, q] of [[silverK, 1], [goldK, 2]]) {
     ctx.fillStyle = QUALITY[q].color;
     ctx.fillRect(bx + 8 + (w - 16) * (mid - (f.zoneW / 2) * k), by + 10, (w - 16) * f.zoneW * k, 6);
   }

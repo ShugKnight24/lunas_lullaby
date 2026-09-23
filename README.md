@@ -23,7 +23,7 @@ If Playwright's bundled browser isn't installed, point `CHROME_PATH` at a local 
 | E / right click | Talk, give a gift, pet, ride, ship, harvest, forage, sleep, shop, build |
 | F | Mount / dismount the horse |
 | 1–9 / mouse wheel | Choose hotbar slot |
-| J · R · I (Tab) | Journal · Friends tab · Bag tab |
+| J · R · I (Tab) · K | Journal · Friends tab · Bag tab · Craft tab |
 | + / − | Zoom |
 | Esc | Pause (controls list, save, quit to title, skip first-day tasks) |
 | Click a hotbar slot | Select it |
@@ -46,6 +46,9 @@ A new game opens with a letter from Rowan, the farm's previous keeper, and Mira 
 - Fish depend on the water (river, pond, a hidden pool), season, hour and weather. The journal's Fish tab logs catches and hints at the rest.
 - Winter has one crop, Moonbloom. Snow doesn't water it.
 - Four skills (Journal → Skills) level 0–10 from XP: farming (harvests), foraging (pickups, felling trees), fishing (catches, more for hard fish and better quality) and ranching (petting hens, collecting eggs). Each level trims the energy that skill's tools cost, and each has a perk: better crop odds, double forage finds, a wider reel zone, more affection per pat.
+- Crafting (K, or Journal → Craft): fertilizer, bait, an Egg Sandwich, Forager's Stew, a Lucky Lure, and two machines. Most recipes unlock with skill levels. Place a Preserves Jar or Mayo Machine on the farm from the hotbar, then load it with E: a crop becomes jam in 3 nights (twice the crop's price + 50), an egg becomes mayonnaise overnight. Quality carries through.
+- At level 5 each skill offers a choice of two professions (e.g. Angler: fish sell for 25% more, or Patient Line: bites come twice as fast).
+- Villagers keep routines: rainy days and some weekdays change where they go. Bram, Mira's grandfather, knows the Hollow's lullaby legend. Heart events unlock at 2 and 5 hearts.
 - The farm well beside the field refills the watering can (face it and press Space), as do the town well and any water.
 
 ## Layout

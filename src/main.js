@@ -32,6 +32,7 @@ const bindings = {
   journal: ["KeyJ"],
   friends: ["KeyR"],
   inventory: ["KeyI", "Tab"],
+  craft: ["KeyK"],
   zoomIn: ["Equal", "NumpadAdd"],
   zoomOut: ["Minus", "NumpadSubtract"],
 };

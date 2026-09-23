@@ -16,7 +16,7 @@ import { addItem } from "./rules/inventory.js";
 import { VILLAGER_IDS } from "./data/villagers.js";
 import { PLAYER_START, HORSE_START, FARM_WELL } from "./world/map.js";
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 
 /** `MIGRATIONS[n]` upgrades a v(n) save to v(n+1). */
 export const MIGRATIONS = {
@@ -33,6 +33,8 @@ export const MIGRATIONS = {
   3: (d) => clearFarmWell({ ...d, skills: newSkills(), tutorial: { step: 0, done: true }, flags: { ...d.flags, intro: true } }),
   // v5: villagers added since (Bram) get a fresh relationship.
   4: (d) => ({ ...d, rel: { ...Object.fromEntries(VILLAGER_IDS.map((id) => [id, { ...newRel(), met: false }])), ...d.rel } }),
+  // v6: professions chosen at skill level 5.
+  5: (d) => ({ ...d, professions: {} }),
 };
 
 /** Remove structures and soil on the farm well's paving, refunding what was built. */
@@ -92,6 +94,7 @@ export function newState(profile = DEFAULT_PROFILE, seed = 7) {
     bin: [],
     flags: { found: {}, intro: false },
     skills: newSkills(),
+    professions: {},
     tutorial: { step: 0, done: false },
     stats: { earned: 0, shippedDays: 0 },
     fishLog: {},

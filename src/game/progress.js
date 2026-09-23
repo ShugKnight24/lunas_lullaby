@@ -9,7 +9,7 @@ import { ITEMS } from "./data/items.js";
 import { TUTORIAL, TUTORIAL_REWARD } from "./data/tutorial.js";
 import { INTRO } from "./data/dialogue.js";
 import { fillLine } from "./rules/dialogue.js";
-import { gainXp, skillLevel, SKILL_NAMES } from "./rules/skills.js";
+import { gainXp, skillLevel, SKILL_NAMES, PROFESSIONS, pendingProfessions } from "./rules/skills.js";
 import { tutorialEvent } from "./rules/tutorial.js";
 import { addItem } from "./rules/inventory.js";
 import { burst, FXK } from "./world/weather.js";
@@ -43,6 +43,18 @@ function playIntro(g) {
       s.flags.intro = true;
       g.tutFlash = 1.2;
     });
+  });
+}
+
+/** Offer a profession choice for any skill that reached level 5 without one. */
+export function updateProfessions(g) {
+  if (g.mode !== "play" || g.ui.isOpen()) return;
+  const id = pendingProfessions(g.s.skills, g.s.professions)[0];
+  if (!id) return;
+  g.ui.chooseProfession(SKILL_NAMES[id], PROFESSIONS[id], (choice) => {
+    g.s.professions = { ...g.s.professions, [id]: choice };
+    const p = PROFESSIONS[id].find((x) => x.id === choice);
+    toast(g, `You're now a ${p.name}! ${p.desc}`);
   });
 }
 

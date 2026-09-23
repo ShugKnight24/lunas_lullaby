@@ -3,9 +3,10 @@
  * ground drops and DOM menus.
  */
 
-import { part, oval, circle, hi, fill, line, ellD, rrD, capD, polyD, outlined, sprite, toSvg, dark, INK } from "./cozy-kit.js";
+import { part, oval, circle, hi, fill, line, ellD, rrD, capD, polyD, outlined, sprite, toSvg, dark, lite, INK } from "./cozy-kit.js";
 import { CROPS } from "../data/crops.js";
 import { FISH } from "../data/fish.js";
+import { ITEMS } from "../data/items.js";
 import { leafD } from "./crops-art.js";
 
 const BOX = [-17, -17, 34, 34];
@@ -24,6 +25,15 @@ const DRAW = {
   rod: () => line("M-11 12L10 -12", 4.2, INK) + line("M-11 12L10 -12", 2.4, "#c98a4a") + line("M10 -12Q14 -2 11 6", 0.9, "#f4f4f4") + circle(11, 7, 2, "#e8566a", { s: 0.4, w: 1 }) + circle(-7, 7, 2.6, "#8a8a9a", { s: 0.6, w: 1.1 }),
 
   egg: () => part("M0 -11C7 -11 10 0 10 4C10 10 5 12 0 12C-5 12 -10 10 -10 4C-10 0 -7 -11 0 -11Z", "#f6ead8", { s: 1.6 }) + hi(-4, -4, 2.2, 3, 0.8),
+  fertilizer: () => sack("#c8a878", "#a078c8"),
+  deluxe_fertilizer: () => sack("#e8d8a8", "#f6c63c"),
+  mayonnaise: () => jar("#fff4d0", "#f6e6a8"),
+  preserves_jar: () => part(rrD(-9, -9, 18, 20, 5), "#d4ecf4", { s: 1.6 }) + hi(-5, -4, 1.4, 3.4, 0.6) + part(rrD(-10, -13, 20, 5, 2), WOOD, { s: 0.8 }),
+  mayo_machine: () => part(rrD(-11, -8, 22, 20, 4), "#efe2c6", { s: 1.6 }) + part(rrD(-5, -3, 10, 7, 2), "#f6d86a", { s: 0.6, w: 1.1 }) + part("M-7 -13L7 -13L4 -8H-4Z", "#c8b8a0", { s: 0.6, w: 1.1 }) + line("M11 0H14V-6", 2, INK),
+  egg_sandwich: () => part("M-12 2L0 -10L12 2Z", "#f0c890", { s: 1.4 }) + part("M-11 3H11L9 7H-9Z", "#fff4d0", { s: 0.6, w: 1.1 }) + circle(0, 4, 3, "#f6c63c", { s: 0.6, w: 1 }) + part("M-12 7H12L10 12H-10Z", "#f0c890", { s: 1.2 }),
+  forager_stew: () => part("M-12 -2H12C12 8 6 12 0 12C-6 12 -12 8 -12 -2Z", "#b07a5a", { s: 1.6 }) + fill(ellD(0, -2, 11, 3.4), "#c8744a") + circle(-4, -3, 2.2, "#f4ead8", { s: 0.4, w: 1 }) + leaf([3, -3], 200, 7, 2.4, "#7cc06a") + line("M-4 -8Q-2 -12 -4 -15M3 -8Q5 -12 3 -15", 1.1, "#fff", 0.7),
+  lucky_lure: () => line("M0 -14V-8", 1.2, "#c8c0b0") + part(ellD(0, 1, 6, 9), "#f6c63c", { s: 1.4 }) + fill(ellD(0, -3, 3, 3), "#e8566a") + line("M-3 10Q0 15 4 11", 1.6, "#9fb4c4") + hi(-2, -4, 1.2, 1.2, 0.8),
+  ...Object.fromEntries(Object.keys(ITEMS).filter((id) => ITEMS[id].src).map((id) => [id, () => jar(lite(CROPS[ITEMS[id].src].color, 0.1), CROPS[ITEMS[id].src].color)])),
   bait: () => part("M-9 -2C-9 -9 9 -9 9 -2C9 6 -9 6 -9 -2Z", "#b07a5a", { s: 1.6 }) + fill(ellD(-3, -4, 2, 1.2), "#e8b890", 0.8) + line("M-5 0Q0 3 5 0M-4 3Q0 5 4 3", 1, dark("#b07a5a", 0.35)) + circle(0, -10, 2.4, "#e8566a", { s: 0.6 }),
   hay: () => part(rrD(-11, -6, 22, 14, 4), "#e8c86a", { s: 1.8 }) + line("M-8 -3H8M-8 1H8M-8 5H8", 0.9, dark("#e8c86a", 0.3)) + fill(rrD(-2, -7, 4, 16, 1.2), "#b0603a") + hi(-6, -4, 3, 1, 0.6),
   wood: () => part(capD([-10, 5], [9, -3], 9, 9), WOOD, { s: 1.4 }) + oval(10, -3.5, 3.6, 4.3, "#e8c08a", { s: 0.6 }) + line("M9.5 -5.5Q12 -3.5 9.5 -1.5", 0.8, dark(WOOD, 0.2)) + part(capD([-9, 11], [7, 7], 7, 7), dark(WOOD, 0.08), { s: 1.2 }),
@@ -58,6 +68,16 @@ function berries(c) {
   let m = leaf([0, 4], 150, 12, 4.6, "#6aa25a") + leaf([0, 4], 215, 12, 4.6, "#5a924a");
   for (const [x, y] of [[-4, 2], [4, 3], [0, -2], [0, 6]]) m += circle(x, y, 3.6, c, { s: 1, w: 1.2 }) + fill(ellD(x - 1, y - 1.2, 0.9, 0.9), "#fff", 0.7);
   return m;
+}
+
+/** Tied sack with a coloured band (fertilizers). */
+function sack(c, band) {
+  return part("M-10 12C-13 4 -11 -4 -6 -7L6 -7C11 -4 13 4 10 12Z", c, { s: 1.8 }) + fill(rrD(-10, 0, 20, 5, 1), band) + part("M-6 -7L-8 -12H8L6 -7Z", c, { s: 0.6, w: 1.2 }) + line("M-6 -8H6", 1.6, dark(c, 0.4)) + hi(-5, -3, 1.4, 2.4, 0.5);
+}
+
+/** Small preserves jar with a cloth lid. */
+function jar(fill1, cloth) {
+  return part(rrD(-9, -7, 18, 19, 5), fill1, { s: 1.6 }) + hi(-5, -2, 1.4, 3, 0.6) + part("M-11 -8C-6 -13 6 -13 11 -8L8 -5H-8Z", cloth, { s: 0.6, w: 1.2 }) + line("M-8 -6H8", 1.2, dark(cloth, 0.35));
 }
 
 function fish(c, fin) {

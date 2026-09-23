@@ -162,6 +162,10 @@ export function removeStructure(g, o, refundIt) {
     const r = refund(STRUCTURES[st.type].cost);
     for (const k in r) if (r[k]) addItem(g.s.inv, k, r[k]);
     if (st.eggs) st.eggs.forEach((n, q) => n && addItem(g.s.inv, "egg", n, q));
+    const def = STRUCTURES[st.type];
+    if (def.item) addItem(g.s.inv, def.item);
+    if (st.input) addItem(g.s.inv, st.input, 1, st.q);
+    if (st.out) addItem(g.s.inv, st.out, 1, st.q);
   }
   fenceMasks(g);
   return st;

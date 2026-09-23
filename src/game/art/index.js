@@ -137,6 +137,9 @@ function resolveStructure(o, season) {
   } else if (t === "well") {
     key = `well:${s}`;
     build = () => P.wellSprite(s);
+  } else if (t === "preserves_jar" || t === "mayo_machine") {
+    key = `${t}:${o.busy ? 1 : 0}`;
+    build = () => (t === "preserves_jar" ? P.preservesJarSprite : P.mayoMachineSprite)(!!o.busy);
   }
   o.key = key;
   o.spr = sprite(key, build);

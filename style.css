@@ -72,9 +72,9 @@ input.text:focus { box-shadow: 0 0 0 4px var(--rose-soft); }
 .letter p:last-of-type { text-align: right; font-family: var(--display); font-weight: 600; }
 
 /* ── HUD strip ── */
-.hudstrip { position: absolute; top: 14px; left: 16px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; width: min(320px, 60vw); }
+.hudstrip { position: absolute; top: 14px; left: 16px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; width: min(400px, 60vw); }
 .hudstrip[hidden], .task[hidden] { display: none; }
-.hudbtns { display: flex; gap: 8px; }
+.hudbtns { display: flex; gap: 8px; flex-wrap: wrap; }
 .hudbtn { display: inline-flex; align-items: center; gap: 6px; font: 600 15px var(--display); color: var(--ink); background: var(--cream); border: 2.5px solid var(--ink); border-radius: 14px; padding: 6px 10px; box-shadow: 0 3px 0 var(--shadow); cursor: pointer; }
 .hudbtn:hover { background: #fff; }
 .hudbtn:focus-visible { outline: 3px solid var(--rose); outline-offset: 2px; }
@@ -98,6 +98,21 @@ input.text:focus { box-shadow: 0 0 0 4px var(--rose-soft); }
 .skill small { color: rgba(58,37,48,.75); }
 .skill .perk { font-style: italic; }
 @media (max-width: 640px) { .hudstrip { top: 196px; } .skills { grid-template-columns: 1fr; } .hudbtn kbd.key { display: none; } .hudbtn { padding: 5px 8px; } }
+
+.recipes { display: grid; gap: 8px; }
+.recipe { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 12px; background: #fbe9d4; border: 2px solid rgba(58,37,48,.25); border-radius: 14px; padding: 8px 12px; }
+.recipe .ico svg { width: 40px; height: 40px; }
+.recipe.locked { opacity: .6; }
+.recipe .info { display: grid; gap: 2px; }
+.recipe.locked .ico { filter: grayscale(1); }
+.needs { display: flex; flex-wrap: wrap; gap: 4px 10px; font: 600 13px var(--display); }
+.need { display: inline-flex; align-items: center; gap: 2px; }
+.need.short { color: #c0404a; }
+.skill .prof { color: #6a4a8a; font-weight: 700; font-style: normal; }
+.profopts { display: grid; gap: 10px; margin-top: 10px; }
+.profopt { display: grid; gap: 4px; text-align: left; font: 500 15px var(--body, inherit); color: var(--ink); background: #fbe9d4; border: 2.5px solid var(--ink); border-radius: 16px; padding: 12px 14px; cursor: pointer; box-shadow: 0 3px 0 var(--shadow); }
+.profopt b { font: 700 18px var(--display); }
+.profopt:hover, .profopt:focus-visible { background: #fff; outline: 3px solid var(--rose); outline-offset: 2px; }
 
 /* ── Dialogue ── */
 .dialogue {

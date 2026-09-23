@@ -11,12 +11,15 @@ export function shipItem(bin, id, n, q = 0) {
   return out;
 }
 
-/** Earnings for a bin: `{ total, lines: [{ id, q, n, each, sum }] }`. */
-export function settle(bin, items) {
+/**
+ * Earnings for a bin: `{ total, lines: [{ id, q, n, each, sum }] }`. `mult(id)`
+ * scales an item's price (professions).
+ */
+export function settle(bin, items, mult = () => 1) {
   const lines = [];
   let total = 0;
   for (const { id, n, q = 0 } of bin) {
-    const each = sellPrice(items[id]?.sell ?? 0, q);
+    const each = Math.round(sellPrice(items[id]?.sell ?? 0, q) * mult(id));
     lines.push({ id, q, n, each, sum: each * n });
     total += each * n;
   }

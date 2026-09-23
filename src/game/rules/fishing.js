@@ -31,14 +31,18 @@ export function pickFish(pool, r) {
 /** Reel bar tuning: marker speed, green zone width (+ skill `zone` bonus) and the bite reaction window (s). */
 export const barParams = (diff, zone = 0) => ({ vel: 0.9 + diff * 1.5, zoneW: 0.26 - diff * 0.14 + zone, bite: 0.9 - diff * 0.35 });
 
+/** Gold and silver bands as fractions of the zone's half-width; a Lucky Lure widens them. */
+export const qualityBands = (lucky = false) => (lucky ? [0.35, 0.7] : [0.2, 0.5]);
+
 /**
  * Where the marker stopped relative to the zone: null (missed), or a quality
- * — gold for the middle fifth, silver for the middle half, else normal.
+ * — gold in the middle band, silver in the next, else normal.
  */
-export function catchQuality(pos, zone, zoneW) {
+export function catchQuality(pos, zone, zoneW, lucky = false) {
   if (pos < zone || pos > zone + zoneW) return null;
   const off = Math.abs(pos - (zone + zoneW / 2)) / (zoneW / 2);
-  return off <= 0.2 ? 2 : off <= 0.5 ? 1 : 0;
+  const [gold, silver] = qualityBands(lucky);
+  return off <= gold ? 2 : off <= silver ? 1 : 0;
 }
 
 /** Record a catch: log is `{ [id]: { n, best } }` (best = highest quality). */

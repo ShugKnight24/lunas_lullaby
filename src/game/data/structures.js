@@ -13,4 +13,8 @@ export const STRUCTURES = {
   well: { name: "Well", w: 2, h: 2, cost: { stone: 20, gold: 150 }, water: true, desc: "Refill your watering can." },
 };
 
+// Machines are crafted and placed from the bag (`item`), not bought in build mode.
+STRUCTURES.preserves_jar = { name: "Preserves Jar", w: 1, h: 1, cost: {}, item: "preserves_jar", desc: "Turns a crop into jam." };
+STRUCTURES.mayo_machine = { name: "Mayo Machine", w: 1, h: 1, cost: {}, item: "mayo_machine", desc: "Turns an egg into mayonnaise." };
+
 export const BUILD_ORDER = ["fence", "path", "scarecrow", "sprinkler", "coop", "well"];

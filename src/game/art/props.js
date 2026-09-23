@@ -358,6 +358,22 @@ export function sprinklerSprite() {
   return sprite([-14, -22, 28, 26], [L(m)]);
 }
 
+/** Preserves jar: glass crock with a wooden lid; `busy` fills it with amber jam. */
+export function preservesJarSprite(busy) {
+  let m = part(rrD(-10, -24, 20, 24, 6), busy ? "#e8a04a" : "#d4ecf4", { s: 1.6 });
+  if (busy) m += fill(ellD(-3, -14, 1.6, 1.6), "#fff2c8", 0.8) + fill(ellD(3, -9, 1.2, 1.2), "#fff2c8", 0.7);
+  m += hi(-6, -18, 1.6, 4, 0.6) + part(rrD(-11, -28, 22, 6, 2), "#b07a4a", { s: 0.8 }) + part(rrD(-3, -31, 6, 4, 1.5), "#8a5a3a", { s: 0.4, w: 1.1 });
+  return sprite([-15, -35, 30, 38], [L(m)]);
+}
+
+/** Mayo machine: a cream box with a hopper and crank; `busy` lights the window. */
+export function mayoMachineSprite(busy) {
+  let m = part("M-8 -30L8 -30L4 -24H-4Z", "#c8b8a0", { s: 0.8 });
+  m += part(rrD(-12, -24, 24, 24, 4), "#efe2c6", { s: 1.8 }) + part(rrD(-6, -18, 12, 8, 2), busy ? "#f6d86a" : "#c8c0b0", { s: 0.6, w: 1.2 });
+  m += line("M12 -14H17V-20", 2.2, INK) + circle(17, -21, 2, "#e8566a", { s: 0.4, w: 1 }) + hi(-8, -20, 1.4, 3, 0.5);
+  return sprite([-16, -34, 36, 38], [L(m)]);
+}
+
 /** Flat stepping-stone path tile (drawn on the ground layer). */
 export function pathTileSprite(season) {
   const c = season === 3 ? "#d8d4dc" : "#d4c8b8";

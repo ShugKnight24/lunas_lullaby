@@ -60,9 +60,9 @@ undefined energy" for non-food items.
 1. **Skills.** ✅ Farming, foraging, fishing and ranching XP, levels 0–10;
    each level trims tool energy, plus one perk per skill (`rules/skills.js`).
    Next: recipe unlocks at levels 3/6/9 once crafting exists.
-2. **Crafting.** A recipe table plus a craft panel: sprinkler tiers, fertilizer,
-   bait, chests, and preserves jars/kegs (artisan goods, which Harvest Moon and
-   Stardew both use as the mid-game money curve).
+2. **Crafting.** ✅ Recipe table + Craft tab with skill unlocks; Preserves Jar
+   and Mayo Machine as placeable machines (`rules/crafting.js`,
+   `rules/machines.js`); level-5 professions. Next: chests, sprinkler tiers.
 3. **Cooking.** Kitchen upgrade to the farmhouse; recipes from villagers at
    heart milestones; buff foods.
 4. **Tool upgrades.** Copper/iron/gold tiers at a blacksmith: larger area
@@ -73,9 +73,8 @@ undefined energy" for non-food items.
 
 ## Phase 3: world and people
 
-1. **Villager schedules.** Hourly waypoints already exist. Add weekday and
-   weather variants (rainy days indoors, a market day) on top of
-   `world/path.js`. This is the biggest liveliness win.
+1. **Villager schedules.** ✅ Rain and weekday routines (`rules/schedule.js`),
+   a fourth villager (Bram), heart events at 2 and 5 hearts.
 2. **More villagers.** Grow from 3 to about 8, each with gift tastes, 2/4/6/8-heart
    events, and birthdays. Author dialogue as data (consider Ink or Yarn if
    the branching gets deep).
@@ -98,8 +97,5 @@ undefined energy" for non-food items.
 
 ## Suggested next three tasks
 
-1. Crafting (Phase 2.2): recipe table + panel; fertilizer and sprinklers
-   become craftable, with recipes unlocked by skill level
-2. Villager schedule variants (Phase 3.1): rainy-day and weekday routes
-3. Audio (Phase 4): procedural ambient music and tool SFX — the game is
+1. Audio (Phase 4): procedural ambient music and tool SFX — the game is
    silent, and it's the biggest remaining feel gap

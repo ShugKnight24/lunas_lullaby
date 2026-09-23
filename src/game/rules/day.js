@@ -1,7 +1,7 @@
 /**
  * End-of-day rollover on a plain save state: ship the bin, grow crops,
  * advance the calendar, wither out-of-season crops, roll weather, water by
- * rain and sprinklers, feed coops, respawn forage and restore energy. Pure: returns a
+ * rain and sprinklers, feed coops, run machines, respawn forage and restore energy. Pure: returns a
  * new state plus a report for the summary card.
  */
 
@@ -12,6 +12,8 @@ import { nextDay, dayIndex } from "./clock.js";
 import { rollWeather } from "./weather.js";
 import { sprinklerTiles } from "./structures.js";
 import { coopMorning } from "./animals.js";
+import { machineMorning } from "./machines.js";
+import { MACHINES } from "../data/machines.js";
 
 /** Tile indices watered this morning by sprinklers. */
 export function sprinklerCoverage(structures, w) {
@@ -49,7 +51,7 @@ export function respawnForage(forage, spots, day, season, table, rareTable) {
  * @param {{ crops, items, w, spots, forage, rareForage, passedOut? }} o
  */
 export function endDay(s, o) {
-  const { total, lines } = settle(s.bin, o.items);
+  const { total, lines } = settle(s.bin, o.items, o.mult);
   let gold = s.gold + total;
   const { clock, seasonChanged } = nextDay(s.clock);
   const weather = rollWeather(dayIndex(clock), clock.season, s.seed);
@@ -75,6 +77,7 @@ export function endDay(s, o) {
   let eggs = 0;
   const today = dayIndex(s.clock);
   const structures = s.structures.map((st) => {
+    if (MACHINES[st.type]) return machineMorning(st, MACHINES[st.type]);
     if (st.type !== "coop") return st;
     const r = coopMorning(st, today, (i) => hash(st.uid * 8 + i, today));
     eggs += r.laid;

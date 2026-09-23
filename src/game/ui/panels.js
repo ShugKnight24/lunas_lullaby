@@ -1,7 +1,7 @@
 /**
  * DOM overlay panels: dialogue box, letter, shop, build menu + build bar,
- * journal (friends / bag / fish / skills / farm), pause, confirm, name prompt
- * and the end-of-day summary; plus the always-on HUD strip (Bag / Journal /
+ * journal (friends / bag / craft / fish / skills / farm), profession choice,
+ * pause, confirm, name prompt and the end-of-day summary; plus the always-on HUD strip (Bag / Journal /
  * Menu buttons and the first-day task card). While any panel is open the game loop idles (`ui.isOpen()`);
  * panel keys are captured before the game's input sees them.
  */
@@ -18,7 +18,9 @@ import { addItem, countItem } from "../rules/inventory.js";
 import { seasonName, weekday } from "../rules/clock.js";
 import { affordable } from "../rules/structures.js";
 import { henHearts } from "../rules/animals.js";
-import { SKILLS, SKILL_NAMES, PERKS, skillProgress, MAX_LEVEL } from "../rules/skills.js";
+import { SKILLS, SKILL_NAMES, PERKS, PROFESSIONS, skillProgress, skillLevel, MAX_LEVEL } from "../rules/skills.js";
+import { RECIPES } from "../data/recipes.js";
+import { craft, missing, unlocked } from "../rules/crafting.js";
 import { skipTutorial } from "../rules/tutorial.js";
 import { TUTORIAL } from "../data/tutorial.js";
 import { iconSvg } from "../art/icons.js";
@@ -104,7 +106,7 @@ export function createUI(root) {
   const strip = h(
     "div.hudstrip",
     {},
-    h("div.hudbtns", {}, hudBtn("Bag", "I", () => ui.journal("items"), count), hudBtn("Journal", "J", () => ui.journal("friends")), hudBtn("Menu", "Esc", () => ui.pause())),
+    h("div.hudbtns", {}, hudBtn("Bag", "I", () => ui.journal("items"), count), hudBtn("Craft", "K", () => ui.journal("craft")), hudBtn("Journal", "J", () => ui.journal("friends")), hudBtn("Menu", "Esc", () => ui.pause())),
     task,
   );
   strip.addEventListener("pointerenter", () => (ui.pointerOnUi = true));
@@ -171,6 +173,19 @@ export function createUI(root) {
     box.addEventListener("click", next);
     open(box, { cls: "bottom", closable: false, onKey: (e) => (["KeyE", "Space", "Enter", "Escape"].includes(e.code) ? (next(), true) : false) });
     show();
+  };
+
+  // ── Profession choice (level 5) ──
+  ui.chooseProfession = (skillName, options, cb) => {
+    const pick = (id) => (close(), cb(id));
+    const box = h(
+      "div.panel.small.profession",
+      {},
+      h("h2", {}, `${skillName} level 5!`),
+      h("p", {}, "Choose a profession. This choice is for keeps."),
+      h("div.profopts", {}, options.map((o) => h("button.profopt", { onclick: () => pick(o.id) }, h("b", {}, o.name), h("span", {}, o.desc)))),
+    );
+    open(box, { closable: false });
   };
 
   // ── Letter ──
@@ -306,7 +321,7 @@ export function createUI(root) {
     let pick = -1;
     const show = (t) => {
       tab = t;
-      tabs.replaceChildren(...[["friends", "Friends"], ["items", "Bag"], ["fish", "Fish"], ["skills", "Skills"], ["farm", "Farm"]].map(([id, label]) => h(`button.tab${id === t ? ".on" : ""}`, { onclick: () => show(id) }, label)));
+      tabs.replaceChildren(...[["friends", "Friends"], ["items", "Bag"], ["craft", "Craft"], ["fish", "Fish"], ["skills", "Skills"], ["farm", "Farm"]].map(([id, label]) => h(`button.tab${id === t ? ".on" : ""}`, { onclick: () => show(id) }, label)));
       if (t === "friends") {
         body.replaceChildren(
           ...VILLAGER_IDS.map((id) => {
@@ -350,6 +365,42 @@ export function createUI(root) {
           );
         draw();
         body.replaceChildren(grid, h("p.note", {}, "Click two slots to swap them. The top row is your hotbar (keys 1–9)."));
+      } else if (t === "craft") {
+        const levels = Object.fromEntries(SKILLS.map((id) => [id, skillLevel(g.s.skills[id])]));
+        const draw = () =>
+          body.replaceChildren(
+            h(
+              "div.recipes",
+              {},
+              RECIPES.map((r) => {
+                const [out, n] = r.out;
+                const known = unlocked(r, levels);
+                const short = missing(r, g.s.inv);
+                const make = () => {
+                  const res = craft(r, g.s.inv, levels);
+                  if (res.error) return toast(g, res.error);
+                  toast(g, `Crafted ${n > 1 ? `${n} × ` : ""}${ITEMS[out].name}`, out);
+                  draw();
+                };
+                return h(
+                  `div.recipe${known ? "" : ".locked"}`,
+                  {},
+                  h("div.ico", { html: iconSvg(out) }),
+                  h(
+                    "div.info",
+                    {},
+                    h("b", {}, `${ITEMS[out].name}${n > 1 ? ` ×${n}` : ""}`),
+                    known
+                      ? h("div.needs", {}, Object.entries(r.in).map(([id, k]) => h(`span.need${short.some((m) => m.id === id) ? ".short" : ""}`, { title: ITEMS[id].name }, h("span.mini", { html: iconSvg(id) }), `${countItem(g.s.inv, id)}/${k}`)))
+                      : h("small", {}, `Learn at ${SKILL_NAMES[r.skill[0]]} level ${r.skill[1]}`),
+                  ),
+                  h("button.btn", { onclick: make, disabled: !known || short.length > 0 }, "Craft"),
+                );
+              }),
+            ),
+            h("p.note", {}, "New recipes unlock as your skills grow. Machines are placed on the farm from your hotbar."),
+          );
+        draw();
       } else if (t === "skills") {
         body.replaceChildren(
           h(
@@ -365,6 +416,9 @@ export function createUI(root) {
                 h("div.xpbar", { role: "progressbar", "aria-valuenow": pct, "aria-valuemin": 0, "aria-valuemax": 100, "aria-label": `${SKILL_NAMES[id]} progress` }, h("span", { style: `width:${pct}%` })),
                 h("small", {}, p.need ? `${p.into} / ${p.need} XP to level ${p.level + 1}` : "Mastered!"),
                 h("small.perk", {}, `Each level: tools cost less energy. ${PERKS[id]}.`),
+                g.s.professions[id]
+                  ? h("small.prof", {}, `★ ${PROFESSIONS[id].find((p) => p.id === g.s.professions[id]).name}: ${PROFESSIONS[id].find((p) => p.id === g.s.professions[id]).desc}`)
+                  : h("small", {}, "Choose a profession at level 5."),
               );
             }),
           ),
@@ -412,7 +466,7 @@ export function createUI(root) {
     };
     show(tab);
     const box = h("div.panel.wide.journal", {}, h("header", {}, h("h2", {}, `${g.s.profile.name}'s Journal`), tabs), body, h("div.row", {}, h("button.btn", { onclick: close }, "Close")));
-    open(box, { onKey: (e) => (e.code === "KeyJ" || e.code === "KeyR" || e.code === "KeyI" ? (close(), true) : false) });
+    open(box, { onKey: (e) => (e.code === "KeyJ" || e.code === "KeyR" || e.code === "KeyI" || e.code === "KeyK" ? (close(), true) : false) });
   };
 
   // ── Pause ──
@@ -424,7 +478,7 @@ export function createUI(root) {
       ["E / Right-click", "Talk, gift, pet, ship, harvest"],
       ["F", "Mount / dismount the horse"],
       ["1–9 / Wheel", "Choose hotbar slot"],
-      ["J · R · I", "Journal · Friends · Bag"],
+      ["J · R · I · K", "Journal · Friends · Bag · Craft"],
       ["+ / −", "Zoom"],
       ["Esc", "Pause"],
     ];

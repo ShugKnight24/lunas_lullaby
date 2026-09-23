@@ -21,6 +21,8 @@ import { endDay, respawnForage } from "./rules/day.js";
 import { CROPS } from "./data/crops.js";
 import { ITEMS } from "./data/items.js";
 import { STRUCTURES } from "./data/structures.js";
+import { MACHINES } from "./data/machines.js";
+import { sellMult } from "./rules/skills.js";
 import { FORAGE, RARE_FORAGE } from "./data/forage.js";
 import { VILLAGERS, VILLAGER_IDS } from "./data/villagers.js";
 import { useTool, interact, updateTarget, toggleMount } from "./actions.js";
@@ -28,7 +30,7 @@ import { updateBuild, exitBuild, fenceMasks } from "./build.js";
 import { updateFishing } from "./fishing.js";
 import { renderGame } from "./render.js";
 import { toast, updateHud, hotbarSlotAt } from "./ui/hud.js";
-import { queueIntro, updateIntro } from "./progress.js";
+import { queueIntro, updateIntro, updateProfessions } from "./progress.js";
 
 const WORLD_DATA = buildWorld(7);
 
@@ -125,6 +127,7 @@ export function addStructureObject(g, st) {
     g.chickens.push(...o.chickens);
   }
   if (st.type === "well") o.y = (st.ty + 2) * TILE - 4;
+  if (MACHINES[st.type]) o.busy = !!st.input;
   lv.add(o);
   resolveObject(o, g.s.clock.season);
   return o;
@@ -237,10 +240,14 @@ export function sleep(g, passedOut = false) {
     g,
     () => {
       const before = g.s.clock.season;
-      const { state, report } = endDay(g.s, { crops: CROPS, items: ITEMS, w: g.levels.world.w, spots: g.spots, forage: FORAGE, rareForage: RARE_FORAGE, passedOut });
+      const { state, report } = endDay(g.s, { crops: CROPS, items: ITEMS, w: g.levels.world.w, spots: g.spots, forage: FORAGE, rareForage: RARE_FORAGE, passedOut, mult: (id) => sellMult(g.s.professions, id, ITEMS[id]) });
       g.s = state;
       g.s.stats.earned += report.total;
       regrowWorld(g);
+      for (const o of g.levels.world.objects) if (o.kind === "structure" && MACHINES[o.type]) {
+        o.busy = !!g.s.structures.find((st) => st.uid === o.uid)?.input;
+        resolveObject(o, g.s.clock.season);
+      }
       if (g.s.clock.season !== before) resolveSeason(g);
       syncAllSoil(g);
       // Wake up in bed.
@@ -338,9 +345,11 @@ export function update(g, dt, t) {
   }
   if (g.mode !== "play") return;
   updateIntro(g, dt);
+  updateProfessions(g);
 
   if (input.pressed("pause")) return g.ui.pause();
   if (input.pressed("journal")) return g.ui.journal("friends");
+  if (input.pressed("craft")) return g.ui.journal("craft");
   if (input.pressed("friends")) return g.ui.journal("friends");
   if (input.pressed("inventory")) return g.ui.journal("items");
 

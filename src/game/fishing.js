@@ -11,7 +11,8 @@ import { FISH } from "./data/fish.js";
 import { waterKind } from "./world/map.js";
 import { fishPool, pickFish, barParams, catchQuality, logCatch } from "./rules/fishing.js";
 import { QUALITY } from "./rules/quality.js";
-import { toolEnergy, fishingZone, XP } from "./rules/skills.js";
+import { toolEnergy, fishingZone, XP, has } from "./rules/skills.js";
+import { countItem } from "./rules/inventory.js";
 import { award, level } from "./progress.js";
 import { give } from "./actions.js";
 import { removeItem } from "./rules/inventory.js";
@@ -47,11 +48,14 @@ export function startFishing(g) {
   // Bait in the bag is used up one per cast and halves the wait.
   f.bait = f.fish && removeItem(s.inv, "bait", 1);
   if (f.bait) f.wait *= 0.5;
+  const patient = has(s.professions, "patient");
+  if (patient) f.wait *= 0.5;
   f.pos = 0;
   f.vel = bar.vel * (0.9 + Math.random() * 0.2);
   f.zoneW = bar.zoneW;
   f.zone = 0.1 + Math.random() * (0.8 - bar.zoneW);
-  f.biteWin = bar.bite;
+  f.biteWin = bar.bite + (patient ? 0.3 : 0);
+  f.lucky = countItem(s.inv, "lucky_lure") > 0;
   p.useItem = "rod";
   g.mode = "fishing";
 }
@@ -96,7 +100,7 @@ export function updateFishing(g, dt) {
     if (f.pos > 1) (f.pos = 2 - f.pos), (f.vel = -f.vel);
     else if (f.pos < 0) (f.pos = -f.pos), (f.vel = -f.vel);
     if (press) {
-      const q = catchQuality(f.pos, f.zone, f.zoneW);
+      const q = catchQuality(f.pos, f.zone, f.zoneW, f.lucky);
       if (q === null) toast(g, "Snap! The line went slack.");
       else if (give(g, f.fish, 1, f.bx, f.by, q)) {
         const first = !g.s.fishLog[f.fish];

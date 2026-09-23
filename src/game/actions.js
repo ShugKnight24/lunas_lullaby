@@ -1,7 +1,7 @@
 /**
  * What the player's hands do: tool use toward the facing tile, the E
  * interaction (talk, gift, pet, ride, ship, harvest, forage, bed, shop,
- * build board, coop) and the prompt preview that tells them which one E will do.
+ * build board, coop, machines) and the prompt preview that tells them which one E will do.
  */
 
 import { TILE, CAN_CAPACITY, MAX_ENERGY } from "./config.js";
@@ -11,9 +11,14 @@ import { FORAGE_RESPAWN_DAYS } from "./data/forage.js";
 import { LINES, GIFT_LINES, HEART_EVENTS } from "./data/dialogue.js";
 import { GR, inFarm } from "./world/map.js";
 import { addItem, takeFromSlot } from "./rules/inventory.js";
+import { MACHINES } from "./data/machines.js";
+import { STRUCTURES } from "./data/structures.js";
+import { loadMachine, collectMachine, emptyMachine } from "./rules/machines.js";
+import { canPlace } from "./rules/structures.js";
 import { stockHay, petHen, eggCount, henHearts, FEEDS, COOP_HAY_CAP } from "./rules/animals.js";
 import { sellPrice, qualityName } from "./rules/quality.js";
-import { TOOL_SKILL, toolEnergy, XP, farmingBonus, forageDouble, ranchingPet } from "./rules/skills.js";
+import { TOOL_SKILL, toolEnergy, XP, farmingBonus, forageDouble, ranchingPet, has, sellMult } from "./rules/skills.js";
+import { HEN_LOVE } from "./rules/animals.js";
 import { award, progress, level } from "./progress.js";
 import { plant, water, harvest, isRipe, clearDead, emptySoil, fertilize } from "./rules/crops.js";
 import { shipItem } from "./rules/shipping.js";
@@ -23,7 +28,8 @@ import { pickLine, fillLine } from "./rules/dialogue.js";
 import { resolveObject } from "./art/index.js";
 import { burst, spawnFx, FXK } from "./world/weather.js";
 import { boxFree } from "./world/collide.js";
-import { syncSoil, sleep, setEnergy } from "./game.js";
+import { syncSoil, sleep, setEnergy, addStructureObject } from "./game.js";
+import { placementQuery } from "./build.js";
 import { startFishing } from "./fishing.js";
 import { toast } from "./ui/hud.js";
 
@@ -85,6 +91,8 @@ export function useTool(g) {
   if (def.kind === "food") return eat(g);
   if (def.kind === "seed") return sow(g, slot, tx, ty);
   if (def.kind === "fertilizer") return feedSoil(g, slot, tx, ty);
+  if (def.kind === "machine") return placeMachine(g, slot, tx, ty);
+  if (def.kind === "tackle") return toast(g, `${def.name}: ${def.tip}.`);
   if (def.kind !== "tool") return toast(g, def.kind === "crop" || def.kind === "forage" || def.kind === "fish" || def.kind === "animal" ? "Ship it in the bin or give it as a gift (E)." : `${def.name}: nothing to do with it here.`);
   if (slot.id === "rod") return startFishing(g);
   if (!spend(g, toolEnergy(def.energy, level(g, TOOL_SKILL[slot.id])))) return;
@@ -176,6 +184,44 @@ function sow(g, slot, tx, ty) {
   progress(g, "plant");
 }
 
+/** Set a machine down from the bag onto open farm ground. */
+function placeMachine(g, slot, tx, ty) {
+  if (g.lv.id !== "world" || !inFarm(tx, ty)) return toast(g, "Machines go on your farm.");
+  if (!canPlace(STRUCTURES[slot.id], tx, ty, placementQuery(g))) return toast(g, "There's no room there.");
+  const st = { uid: g.s.uid++, type: slot.id, tx, ty, ...emptyMachine() };
+  g.s.structures.push(st);
+  const o = addStructureObject(g, st);
+  takeFromSlot(g.s.inv, g.s.sel);
+  burst(FXK.DUST, o.x, o.y, 8, 50, 0.5, "rgba(200,170,130,0.8)");
+}
+
+/** E at a machine: collect a finished product, or load what's in hand. */
+function tendMachine(g, o) {
+  const i = g.s.structures.findIndex((st) => st.uid === o.uid);
+  const st = g.s.structures[i];
+  const m = MACHINES[o.type];
+  const got = collectMachine(st);
+  if (got) {
+    if (!give(g, got.item, 1, o.x, o.y - 20, got.q)) return;
+    g.s.structures[i] = got.st;
+    award(g, o.type === "mayo_machine" ? "ranching" : "farming", 8);
+    return refreshMachine(g, o, got.st);
+  }
+  const slot = selected(g);
+  if (!slot) return toast(g, st.input ? `${ITEMS[st.input].name} inside · ${st.left} night${st.left > 1 ? "s" : ""} to go.` : `${m.name}: ${m.hint}.`);
+  const r = loadMachine(st, m, slot.id, ITEMS[slot.id], slot.q ?? 0);
+  if (r.error) return toast(g, r.error);
+  takeFromSlot(g.s.inv, g.s.sel);
+  g.s.structures[i] = r.st;
+  refreshMachine(g, o, r.st);
+  toast(g, `${m.name} is working on your ${ITEMS[r.st.input].name}.`, r.st.input);
+}
+
+export function refreshMachine(g, o, st) {
+  o.busy = !!st.input;
+  resolveObject(o, g.s.clock.season);
+}
+
 function feedSoil(g, slot, tx, ty) {
   if (g.lv.id !== "world") return;
   const idx = tileIdx(g, tx, ty);
@@ -223,7 +269,7 @@ function chop(g, o) {
         o.stump = true;
         o.hp = 3;
         resolveObject(o, g.s.clock.season);
-        give(g, "wood", 5, x, y);
+        give(g, "wood", has(g.s.professions, "lumberjack") ? 10 : 5, x, y);
         award(g, "foraging", XP.tree);
         burst(FXK.LEAF, x, y - 40, 12, 90, 1.4, o.variant === "pine" ? "#4f9570" : "#8cc86a");
       } else {
@@ -312,6 +358,11 @@ export function updateTarget(g, tile) {
     if (o.kind === "board" || (o.kind === "furniture" && o.build)) return show(pr, "Build", o.x, o.y - 56);
     if (o.kind === "furniture" && o.shop) return show(pr, "Shop", o.x, o.y - 56);
     if (o.kind === "furniture" && o.name === "bed") return show(pr, "Sleep", o.x, o.y - 70);
+    if (o.kind === "structure" && MACHINES[o.type]) {
+      const st = coopState(g, o);
+      const m = MACHINES[o.type];
+      return show(pr, st.out ? "Collect" : st.input ? `${st.left} night${st.left > 1 ? "s" : ""} to go` : slot && m.accepts(slot.id, ITEMS[slot.id]) ? "Load" : m.name, o.x, o.y - 44);
+    }
     if (o.kind === "structure" && o.type === "coop") {
       const st = coopState(g, o);
       return show(pr, eggCount(st) ? "Collect eggs" : slot && FEEDS.includes(slot.id) ? "Add feed" : "Coop", o.x, o.y - 100);
@@ -344,13 +395,14 @@ export function interact(g) {
     if (o.kind === "furniture" && o.shop) return g.ui.shop();
     if (o.kind === "furniture" && o.name === "bed") return g.ui.confirm("Go to bed and end the day?", "Sleep", "Not yet", () => (progress(g, "sleep"), sleep(g)));
     if (o.kind === "structure" && o.type === "coop") return tendCoop(g, o);
+    if (o.kind === "structure" && MACHINES[o.type]) return tendMachine(g, o);
   }
   if (g.lv.id === "world") {
     const idx = tileIdx(g, tx, ty);
     const sp = g.spotAt.get(idx);
     const fo = sp && g.s.forage[sp.id];
     if (fo?.item) {
-      const n = Math.random() < forageDouble(level(g, "foraging")) ? 2 : 1;
+      const n = Math.random() < forageDouble(level(g, "foraging")) + (has(g.s.professions, "gatherer") ? 0.2 : 0) ? 2 : 1;
       if (give(g, fo.item, n, cx(tx), cy(ty))) {
         g.s.forage[sp.id] = { item: null, next: today(g) + FORAGE_RESPAWN_DAYS };
         award(g, "foraging", XP.forage);
@@ -370,7 +422,8 @@ function ship(g) {
   if (!def || def.kind === "tool" || !def.sell) return toast(g, "Hold something to sell, then press E at the bin.");
   g.s.bin = shipItem(g.s.bin, slot.id, slot.n, slot.q);
   progress(g, "ship");
-  toast(g, `Shipped ${slot.n} × ${qualityName(def.name, slot.q)} (${slot.n * sellPrice(def.sell, slot.q)}g tonight)`, slot.id);
+  const each = Math.round(sellPrice(def.sell, slot.q) * sellMult(g.s.professions, slot.id, def));
+  toast(g, `Shipped ${slot.n} × ${qualityName(def.name, slot.q)} (${slot.n * each}g tonight)`, slot.id);
   g.s.inv[g.s.sel] = null;
 }
 
@@ -392,7 +445,7 @@ function chickenAt(g, x, y) {
 
 function petChicken(g, c) {
   const st = g.s.structures.find((s) => s.uid === c.coop);
-  const r = petHen(st.hens[c.hen], today(g), ranchingPet(level(g, "ranching")));
+  const r = petHen(st.hens[c.hen], today(g), ranchingPet(level(g, "ranching")) + (has(g.s.professions, "shepherd") ? HEN_LOVE.pet : 0));
   st.hens[c.hen] = r.hen;
   const hearts = "♥".repeat(henHearts(r.hen)) || "♡";
   if (!r.gained) return toast(g, `${r.hen.name} is content. ${hearts}`);
