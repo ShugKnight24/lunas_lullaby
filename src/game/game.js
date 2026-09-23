@@ -11,11 +11,11 @@ import { buildWorld, HIDDEN, INTERIORS } from "./world/map.js";
 import { createWorldLevel, createInterior, makeObject } from "./world/level.js";
 import { GroundCache } from "./world/ground.js";
 import { createCamera, snapCamera, updateCamera } from "./world/camera.js";
-import { updateFx } from "./world/weather.js";
+import { updateFx, spawnFx, FXK } from "./world/weather.js";
 import { resolveObject, cropKey, cropSpr, DEFS } from "./art/index.js";
 import { warmSvgSprites } from "../engine/sprite.js";
 import { visualStage } from "./rules/crops.js";
-import { createPlayer, createPet, createVillager, createChicken, movePlayer, updatePet, teleportPet, updateVillager, placeVillager, updateChicken, facingTile } from "./actors/actors.js";
+import { moveMult, createPlayer, createPet, createVillager, createChicken, movePlayer, updatePet, teleportPet, updateVillager, placeVillager, updateChicken, facingTile } from "./actors/actors.js";
 import { tick, dayIndex, weekday } from "./rules/clock.js";
 import { endDay, respawnForage } from "./rules/day.js";
 import { CROPS } from "./data/crops.js";
@@ -27,7 +27,7 @@ import { WISHES, PET_DREAMS } from "./data/dreams.js";
 import { newWishes, allWishes, petDream } from "./rules/dreams.js";
 import { FORAGE, RARE_FORAGE } from "./data/forage.js";
 import { VILLAGERS, VILLAGER_IDS } from "./data/villagers.js";
-import { useTool, interact, updateTarget, toggleMount } from "./actions.js";
+import { useTool, interact, updateTarget, toggleMount, toggleBike } from "./actions.js";
 import { updateBuild, exitBuild, fenceMasks } from "./build.js";
 import { updateFishing } from "./fishing.js";
 import { renderGame } from "./render.js";
@@ -120,7 +120,8 @@ export function addStructureObject(g, st) {
   const def = STRUCTURES[st.type];
   const lv = g.levels.world;
   const o = makeObject({ kind: "structure", type: st.type, tx: st.tx, ty: st.ty, w: def.w, h: def.h, uid: st.uid }, 100000 + st.uid);
-  o.solid = !def.floor;
+  o.solid = !def.floor && !def.walk;
+  if (st.color) o.color = st.color;
   o.flat = !!def.floor;
   if (st.type === "coop") {
     o.style = "coop";
@@ -223,6 +224,7 @@ export function goTo(g, levelId, tx, ty, dir) {
   g.mode = "fade";
   fadeOut(g, () => {
     g.lv = g.levels[levelId];
+    if (!g.lv.outdoor) g.player.biking = false;
     g.player.x = tx * TILE + TILE / 2;
     g.player.y = ty * TILE + TILE / 2 + 6;
     g.player.dir = dir;
@@ -259,6 +261,7 @@ export function sleep(g, passedOut = false) {
       // Wake up in bed.
       g.lv = g.levels.house;
       g.player.mounted = false;
+      g.player.biking = false;
       g.player.x = 4 * TILE + TILE / 2;
       g.player.y = 5 * TILE + 10;
       g.player.dir = "down";
@@ -370,7 +373,9 @@ export function update(g, dt, t) {
   if (p.useT > 0) p.useT = Math.max(0, p.useT - dt);
   const ax = input.axis("left", "right");
   const ay = input.axis("up", "down");
-  movePlayer(p, g.lv, ax, ay, dt);
+  p.sprinting = input.down("sprint");
+  if (movePlayer(p, g.lv, ax, ay, dt, moveMult(p, p.sprinting)) && p.sprinting && !p.mounted && !p.biking && Math.random() < dt * 14) spawnFx(FXK.DUST, p.x - (ax || 0) * 8, p.y, -(ax || 0) * 20, -10, 0.35, "rgba(200,170,130,0.6)");
+  if (input.pressed("bike")) toggleBike(g);
   if (p.mounted) {
     g.horse.x = p.x;
     g.horse.y = p.y;

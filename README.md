@@ -22,6 +22,8 @@ If Playwright's bundled browser isn't installed, point `CHROME_PATH` at a local 
 | Space / left click | Use the selected tool or seeds toward the tile you face |
 | E / right click | Talk, give a gift, pet, ride, ship, harvest, forage, sleep, shop, build |
 | F | Mount / dismount the horse |
+| B | Hop on / off the bicycle (outdoors) |
+| Shift | Sprint |
 | 1–9 / mouse wheel | Choose hotbar slot |
 | J · R · I (Tab) · K | Journal · Friends tab · Bag tab · Craft tab |
 | + / − | Zoom |
@@ -51,10 +53,12 @@ After the dream comes a letter from Rowan, the farm's previous keeper, and Mira 
 - Crops, fish and eggs come in normal, silver and gold quality (1×, 1.25×, 1.5× price). Fertilizer and never letting a crop go dry improve harvests; stopping the reel marker near the middle of the green zone improves fish.
 - Fish depend on the water (river, pond, a hidden pool), season, hour and weather. The journal's Fish tab logs catches and hints at the rest.
 - Winter has one crop, Moonbloom. Snow doesn't water it.
-- Four skills (Journal → Skills) level 0–10 from XP: farming (harvests), foraging (pickups, felling trees), fishing (catches, more for hard fish and better quality) and ranching (petting hens, collecting eggs). Each level trims the energy that skill's tools cost, and each has a perk: better crop odds, double forage finds, a wider reel zone, more affection per pat.
+- Five skills (Journal → Skills) level 0–10 from XP: farming (harvests), foraging (pickups, felling trees), fishing (catches, more for hard fish and better quality), ranching (petting hens, collecting eggs) and building (constructing and crafting). Each level trims the energy that skill's tools cost, and each has a perk: better crop odds, double forage finds, a wider reel zone, more affection per pat.
 - Crafting (K, or Journal → Craft): fertilizer, bait, an Egg Sandwich, Forager's Stew, a Lucky Lure, and two machines. Most recipes unlock with skill levels. Place a Preserves Jar or Mayo Machine on the farm from the hotbar, then load it with E: a crop becomes jam in 3 nights (twice the crop's price + 50), an egg becomes mayonnaise overnight. Quality carries through.
 - At level 5 each skill offers a choice of two professions (e.g. Angler: fish sell for 25% more, or Patient Line: bites come twice as fast).
 - Villagers keep routines: rainy days and some weekdays change where they go. Bram, Mira's grandfather, knows the Hollow's lullaby legend. Heart events unlock at 2 and 5 hearts.
+- Building unlocks new things on Theo's board as it grows: a gate (walk-through), log fence, picket fence, stone wall and hedge — all fence styles join up — plus a planter, lamp post (it glows at night) and bench. Wooden and picket fences and gates take paint (pick a colour on the build bar). Materials get cheaper each level, and from level 6 you build it yourself with no gold fee. Build mode tints every open tile you can build on; the farm runs from the house down to the southern tree line.
+- Get around faster: hold Shift to sprint, ride the horse (F), or craft a bicycle (Building 2) and press B.
 - The farm well beside the field refills the watering can (face it and press Space), as do the town well and any water.
 
 ## Layout

@@ -24,7 +24,7 @@ const byY = (a, b) => a.y - b.y;
 /** Fertilizer fleck positions within a soil tile (art units). */
 const FLECKS = [[7, 9], [20, 6], [13, 17], [24, 21], [6, 24]];
 const WEATHER = ["petals", null, "leaves", null];
-const ghostObj = { kind: "structure", type: "", mask: 0, key: "", spr: null };
+const ghostObj = { kind: "structure", type: "", mask: 0, color: null, key: "", spr: null };
 let VW = 0;
 let VH = 0;
 let lastT = 0;
@@ -266,7 +266,7 @@ function drawGlows(ctx, g, lv, ox, oy, z, t, dark) {
     let x = 0;
     let y = 0;
     let r = 0;
-    if (o.kind === "lamp") {
+    if (o.kind === "lamp" || (o.kind === "structure" && o.type === "lamp")) {
       x = o.x;
       y = o.y - 52;
       r = 90;
@@ -330,8 +330,10 @@ function drawGhost(ctx, g, ox, oy, z, t) {
     ctx.fill();
     ctx.stroke();
   }
-  if (ghostObj.type !== type) {
+  const color = b.moving ? b.moving.color ?? null : def.paint ? b.color ?? null : null;
+  if (ghostObj.type !== type || ghostObj.color !== color) {
     ghostObj.type = type;
+    ghostObj.color = color;
     ghostObj.mask = 3;
     resolveObject(ghostObj, g.s.clock.season);
   }

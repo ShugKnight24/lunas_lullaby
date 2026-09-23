@@ -139,3 +139,36 @@ test("mouse clicks still use tools after leaving build mode with its Done button
   await page.mouse.click(760, 400);
   await expect.poll(() => page.evaluate(() => Object.keys(window.__game.state.soil).length)).toBe(1);
 });
+
+test("a built gate lets you through, and B rides the bike outdoors only", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForFunction(() => window.__game);
+  const placed = await page.evaluate(() => {
+    const G = window.__game;
+    G.newGame(undefined, { intro: false });
+    Object.assign(G.state.skills, { building: 400 });
+    G.give("wood", 20);
+    G.give("bicycle", 1);
+    const lv = G.g.levels.world;
+    const o = lv.at(18, 20);
+    if (o && !o.fixed) (o.gone = true), lv.index(o, null);
+    const ok = G.place("fence_gate", 18, 20);
+    G.teleport(18, 19, "world", "down");
+    return ok;
+  });
+  expect(placed).toBe(true);
+  const y0 = await page.evaluate(() => window.__game.g.player.y);
+  await page.keyboard.down("KeyS");
+  await page.waitForTimeout(600);
+  await page.keyboard.up("KeyS");
+  expect(await page.evaluate(() => window.__game.g.player.y)).toBeGreaterThan(y0 + 40);
+
+  await page.keyboard.press("KeyB");
+  await expect.poll(() => page.evaluate(() => window.__game.g.player.biking)).toBe(true);
+  await page.keyboard.press("KeyB");
+  await expect.poll(() => page.evaluate(() => window.__game.g.player.biking)).toBe(false);
+  await page.evaluate(() => window.__game.teleport(5, 5, "house", "down"));
+  await page.keyboard.press("KeyB");
+  await page.waitForTimeout(200);
+  expect(await page.evaluate(() => window.__game.g.player.biking)).toBeFalsy();
+});

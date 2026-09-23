@@ -22,6 +22,8 @@ export const SEASONS = ["spring", "summer", "fall", "winter"];
 
 export const WALK_SPEED = 4.4 * TILE; // units per second
 export const RIDE_MULT = 1.8;
+export const SPRINT_MULT = 1.45;
+export const BIKE_MULT = 1.65;
 export const MAX_ENERGY = 270;
 export const CAN_CAPACITY = 40;
 export const INV_SIZE = 27;

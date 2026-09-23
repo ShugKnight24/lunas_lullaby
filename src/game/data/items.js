@@ -54,6 +54,7 @@ export const ITEMS = {
   mayonnaise: { name: "Mayonnaise", kind: "artisan", sell: 150 },
   ...Object.fromEntries(Object.values(CROPS).map((c) => [`${c.produce}_jam`, { name: JAM_NAMES[c.produce] ?? `${c.name} Preserves`, kind: "artisan", sell: 0, src: c.produce }])),
 
+  bicycle: { name: "Bicycle", kind: "vehicle", tip: "Press B (or use it) to ride · outdoors only" },
   preserves_jar: { name: "Preserves Jar", kind: "machine", tip: "Place on the farm · turns a crop into jam" },
   mayo_machine: { name: "Mayo Machine", kind: "machine", tip: "Place on the farm · turns an egg into mayonnaise" },
   lucky_lure: { name: "Lucky Lure", kind: "tackle", sell: 50, tip: "Keep it in your bag · wider silver and gold bands when reeling" },

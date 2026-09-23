@@ -6,12 +6,12 @@
 
 export const emptyMachine = () => ({ input: null, q: 0, left: 0, out: null });
 
-/** Put one `id` (quality q) in: `{ st }` or `{ error }`. */
-export function loadMachine(st, def, id, item, q = 0) {
+/** Put one `id` (quality q) in: `{ st }` or `{ error }`. `faster` takes a night off (Tinkerer). */
+export function loadMachine(st, def, id, item, q = 0, faster = false) {
   if (st.out) return { error: "Collect what's inside first." };
   if (st.input) return { error: "It's still working." };
   if (!item || !def.accepts(id, item)) return { error: `The ${def.name} can't use that.` };
-  return { st: { ...st, input: id, q, left: def.days, out: null } };
+  return { st: { ...st, input: id, q, left: Math.max(1, def.days - (faster ? 1 : 0)), out: null } };
 }
 
 /** One night passes. */

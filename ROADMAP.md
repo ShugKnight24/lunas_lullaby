@@ -20,7 +20,7 @@ Thin or missing:
 | Fishing | ~~Stub~~ done: 12 fish by water/season/hour/weather, difficulty, quality, log |
 | Social | 3 villagers; heart events are a single 2-heart stub; schedules are by hour only (no day/weather variation) |
 | Winter | ~~No winter crops~~ Moonbloom grows in winter; winter fish. Still no festival |
-| Progression | Skills done (4 skills, levels 0–10, perks). No tool upgrades, crafting, cooking, or long-term goal |
+| Progression | Skills (5, incl. Building), professions, crafting, machines, fence styles/paint done. No tool upgrades or long-term goal yet |
 | Audio | None |
 | Saves | ~~No migrations~~ done: v2 with a migration chain and a frozen v1 fixture |
 | Tests | ~~Rules only~~ done: Playwright day-loop, coop, fishing, onboarding and well specs |

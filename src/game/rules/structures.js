@@ -21,6 +21,22 @@ export function canPlace(def, tx, ty, q) {
 /** Tiles a sprinkler at (tx, ty) waters: the four neighbours. */
 export const sprinklerTiles = (tx, ty) => [[tx, ty - 1], [tx + 1, ty], [tx, ty + 1], [tx - 1, ty]];
 
+/**
+ * What a structure really costs at a Building level: materials shrink 3% a
+ * level (a quarter more for a Carpenter), never below 1; from `diyLevel` the
+ * gold fee is waived because you build it yourself.
+ */
+export function buildCost(cost, level = 0, { carpenter = false, diyLevel = 6 } = {}) {
+  const k = (1 - level * 0.03) * (carpenter ? 0.75 : 1);
+  const out = {};
+  for (const id in cost) {
+    if (id === "gold") {
+      if (level < diyLevel) out.gold = cost.gold;
+    } else out[id] = Math.max(1, Math.ceil(cost[id] * k));
+  }
+  return out;
+}
+
 /** Can the wallet `{ gold, wood, stone }` pay `cost`? */
 export function affordable(cost, wallet) {
   for (const k in cost) if ((wallet[k] ?? 0) < cost[k]) return false;

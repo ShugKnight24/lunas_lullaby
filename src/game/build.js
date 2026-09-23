@@ -7,7 +7,9 @@
 
 import { TILE } from "./config.js";
 import { STRUCTURES } from "./data/structures.js";
-import { canPlace, affordable, refund } from "./rules/structures.js";
+import { canPlace, affordable, refund, buildCost } from "./rules/structures.js";
+import { skillLevel, has, XP, DIY_LEVEL } from "./rules/skills.js";
+import { award } from "./progress.js";
 import { newCoop } from "./rules/animals.js";
 import { countItem, removeItem, addItem } from "./rules/inventory.js";
 import { GR, inFarm, FARM } from "./world/map.js";
@@ -19,14 +21,23 @@ import { toast } from "./ui/hud.js";
 
 const world = (g) => g.levels.world;
 
-const WALLET = { gold: 0, wood: 0, stone: 0 };
+const WALLET = { gold: 0, wood: 0, stone: 0, fiber: 0 };
 /** What the player can spend (one reused object). */
 export function wallet(g) {
   WALLET.gold = g.s.gold;
   WALLET.wood = countItem(g.s.inv, "wood");
   WALLET.stone = countItem(g.s.inv, "stone");
+  WALLET.fiber = countItem(g.s.inv, "fiber");
   return WALLET;
 }
+
+export const buildingLevel = (g) => skillLevel(g.s.skills.building ?? 0);
+
+/** A structure's cost for this player (Building level and profession applied). */
+export const costOf = (g, type) => buildCost(STRUCTURES[type].cost, buildingLevel(g), { carpenter: has(g.s.professions, "carpenter"), diyLevel: DIY_LEVEL });
+
+/** Unlocked at the player's Building level? */
+export const canBuild = (g, type) => buildingLevel(g) >= (STRUCTURES[type].level ?? 0);
 
 /** Placement queries for rules/structures.canPlace (built once per game). */
 export function placementQuery(g) {
@@ -92,7 +103,7 @@ export function updateBuild(g, dt) {
   const def = STRUCTURES[type];
   hoverTile(g, b.mode === "place" || b.moving ? def : { w: 1, h: 1 });
   if (b.mode === "place" || b.moving) {
-    b.valid = canPlace(def, b.tx, b.ty, placementQuery(g)) && (b.moving || affordable(def.cost, wallet(g)));
+    b.valid = canPlace(def, b.tx, b.ty, placementQuery(g)) && (b.moving || affordable(costOf(g, type), wallet(g)));
   } else {
     const o = lv.at(b.tx, b.ty);
     b.valid = !!(o && o.kind === "structure");
@@ -129,13 +140,17 @@ export function placeStructure(g, type, tx, ty) {
     toast(g, "Can't build there.");
     return false;
   }
-  if (!affordable(def.cost, wallet(g))) {
+  if (!canBuild(g, type)) {
+    toast(g, `Learn it at Building level ${def.level}.`);
+    return false;
+  }
+  const cost = costOf(g, type);
+  if (!affordable(cost, wallet(g))) {
     toast(g, "Not enough materials.");
     return false;
   }
-  g.s.gold -= def.cost.gold ?? 0;
-  if (def.cost.wood) removeItem(g.s.inv, "wood", def.cost.wood);
-  if (def.cost.stone) removeItem(g.s.inv, "stone", def.cost.stone);
+  g.s.gold -= cost.gold ?? 0;
+  for (const k in cost) if (k !== "gold") removeItem(g.s.inv, k, cost[k]);
   const lv = world(g);
   for (let y = 0; y < def.h; y++) for (let x = 0; x < def.w; x++) {
     const o = lv.at(tx + x, ty + y);
@@ -143,10 +158,12 @@ export function placeStructure(g, type, tx, ty) {
   }
   const st = { uid: g.s.uid++, type, tx, ty };
   if (type === "coop") Object.assign(st, newCoop(st.uid));
+  if (def.paint && g.build.color) st.color = g.build.color;
   g.s.structures.push(st);
   const o = addStructureObject(g, st);
   fenceMasks(g);
   burst(FXK.DUST, o.x, o.y, 10, 60, 0.6, "rgba(200,170,130,0.8)");
+  award(g, "building", XP.build(def.cost));
   return true;
 }
 
@@ -182,12 +199,11 @@ function placeBack(g) {
 /** Recompute fence connection masks (fixed fences and built ones). */
 export function fenceMasks(g) {
   const lv = world(g);
-  const isFence = (x, y) => {
-    const o = lv.at(x, y);
-    return !!(o && !o.gone && (o.kind === "fence" || (o.kind === "structure" && o.type === "fence")));
-  };
+  // Every fence style (and gates) joins up with the others and the farm's own fences.
+  const fencey = (o) => !!(o && !o.gone && (o.kind === "fence" || (o.kind === "structure" && STRUCTURES[o.type]?.fence)));
+  const isFence = (x, y) => fencey(lv.at(x, y));
   for (const o of lv.objects) {
-    if (!(o.kind === "fence" || (o.kind === "structure" && o.type === "fence"))) continue;
+    if (!fencey(o)) continue;
     const m = (isFence(o.tx - 1, o.ty) ? 1 : 0) | (isFence(o.tx + 1, o.ty) ? 2 : 0) | (isFence(o.tx, o.ty - 1) ? 4 : 0) | (isFence(o.tx, o.ty + 1) ? 8 : 0);
     if (m !== o.mask || !o.spr) {
       o.mask = m;

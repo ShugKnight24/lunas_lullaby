@@ -1,11 +1,11 @@
 /**
- * Skills: farming, foraging, fishing and ranching, each 0..10 from total XP
+ * Skills: farming, foraging, fishing, ranching and building, each 0..10 from total XP
  * (`s.skills[id]`). Every level trims the energy its tools cost, and each
  * skill has one signature perk (see PERKS).
  */
 
-export const SKILLS = ["farming", "foraging", "fishing", "ranching"];
-export const SKILL_NAMES = { farming: "Farming", foraging: "Foraging", fishing: "Fishing", ranching: "Ranching" };
+export const SKILLS = ["farming", "foraging", "fishing", "ranching", "building"];
+export const SKILL_NAMES = { farming: "Farming", foraging: "Foraging", fishing: "Fishing", ranching: "Ranching", building: "Building" };
 /** Total XP needed for levels 1..10. */
 export const LEVEL_XP = [100, 380, 770, 1300, 2150, 3300, 4800, 6900, 10000, 15000];
 export const MAX_LEVEL = LEVEL_XP.length;
@@ -18,6 +18,7 @@ export const PERKS = {
   foraging: "Chance to find double when foraging",
   fishing: "A wider green zone when reeling",
   ranching: "Petting builds more affection",
+  building: "Builds need fewer materials; from level 6 you build it yourself, with no gold fee",
 };
 
 export const newSkills = () => Object.fromEntries(SKILLS.map((id) => [id, 0]));
@@ -55,6 +56,9 @@ export const XP = {
   tree: 10,
   egg: 5,
   petHen: 5,
+  /** Building: by how much went into it. */
+  build: (cost) => 2 + Math.round(((cost.wood ?? 0) + (cost.stone ?? 0)) / 3 + (cost.gold ?? 0) / 40),
+  craft: (ingredients) => 4 + Math.round(Object.values(ingredients).reduce((a, b) => a + b, 0) / 3),
 };
 
 // ── Signature perks ──
@@ -66,6 +70,8 @@ export const forageDouble = (level) => level * 0.05;
 export const fishingZone = (level) => level * 0.006;
 /** Extra affection per pat. */
 export const ranchingPet = (level) => level * 3;
+/** Building level from which you build it yourself (no gold fee). */
+export const DIY_LEVEL = 6;
 
 // ── Professions: at level 5 each skill offers a choice of two ──
 export const PROFESSION_LEVEL = 5;
@@ -85,6 +91,10 @@ export const PROFESSIONS = {
   ranching: [
     { id: "shepherd", name: "Shepherd", desc: "Petting builds twice the affection." },
     { id: "egg_merchant", name: "Egg Merchant", desc: "Eggs and mayonnaise sell for 20% more." },
+  ],
+  building: [
+    { id: "carpenter", name: "Carpenter", desc: "Everything you build takes a quarter less wood and stone." },
+    { id: "tinkerer", name: "Tinkerer", desc: "Machines finish a night sooner." },
   ],
 };
 

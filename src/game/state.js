@@ -16,7 +16,7 @@ import { addItem } from "./rules/inventory.js";
 import { VILLAGER_IDS } from "./data/villagers.js";
 import { PLAYER_START, HORSE_START, FARM_WELL } from "./world/map.js";
 
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 
 /** `MIGRATIONS[n]` upgrades a v(n) save to v(n+1). */
 export const MIGRATIONS = {
@@ -43,6 +43,8 @@ export const MIGRATIONS = {
     if (pet.kind !== "pochita") return d;
     return { ...d, profile: { ...d.profile, pet: { ...pet, kind: "sawpup", name: pet.name === "Pochita" ? "Sawyer" : pet.name } } };
   },
+  // v9: the Building skill.
+  8: (d) => ({ ...d, skills: { ...newSkills(), ...d.skills } }),
 };
 
 /** Remove structures and soil on the farm well's paving, refunding what was built. */

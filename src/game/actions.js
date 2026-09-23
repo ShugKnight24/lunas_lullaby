@@ -10,7 +10,7 @@ import { CROPS } from "./data/crops.js";
 import { FORAGE_RESPAWN_DAYS } from "./data/forage.js";
 import { LINES, GIFT_LINES, HEART_EVENTS } from "./data/dialogue.js";
 import { GR, inFarm } from "./world/map.js";
-import { addItem, takeFromSlot } from "./rules/inventory.js";
+import { addItem, takeFromSlot, countItem } from "./rules/inventory.js";
 import { MACHINES } from "./data/machines.js";
 import { STRUCTURES } from "./data/structures.js";
 import { loadMachine, collectMachine, emptyMachine } from "./rules/machines.js";
@@ -87,6 +87,8 @@ export function useTool(g) {
   const slot = selected(g);
   if (!slot) return;
   const def = ITEMS[slot.id];
+  if (def.kind === "vehicle") return toggleBike(g);
+  if (p.biking) return toast(g, "Hop off your bike first (B).");
   const [tx, ty] = g.target;
   if (def.kind === "food") return eat(g);
   if (def.kind === "seed") return sow(g, slot, tx, ty);
@@ -209,7 +211,7 @@ function tendMachine(g, o) {
   }
   const slot = selected(g);
   if (!slot) return toast(g, st.input ? `${ITEMS[st.input].name} inside · ${st.left} night${st.left > 1 ? "s" : ""} to go.` : `${m.name}: ${m.hint}.`);
-  const r = loadMachine(st, m, slot.id, ITEMS[slot.id], slot.q ?? 0);
+  const r = loadMachine(st, m, slot.id, ITEMS[slot.id], slot.q ?? 0, has(g.s.professions, "tinkerer"));
   if (r.error) return toast(g, r.error);
   takeFromSlot(g.s.inv, g.s.sel);
   g.s.structures[i] = r.st;
@@ -490,6 +492,20 @@ function petPet(g) {
     g.s.pet.happy = Math.min(100, g.s.pet.happy + 10);
     toast(g, `${a.name} loves you! ♥`);
   }
+}
+
+/** Hop on or off the bike (it has to be in your bag, and you have to be outdoors). */
+export function toggleBike(g) {
+  const p = g.player;
+  if (p.biking) {
+    p.biking = false;
+    return;
+  }
+  if (p.mounted) return toast(g, "You're already riding.");
+  if (!countItem(g.s.inv, "bicycle")) return;
+  if (!g.lv.outdoor) return toast(g, "Bikes stay outside.");
+  p.biking = true;
+  burst(FXK.DUST, p.x, p.y, 5, 40, 0.4, "rgba(200,170,130,0.7)");
 }
 
 export function toggleMount(g) {

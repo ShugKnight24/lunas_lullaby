@@ -27,6 +27,7 @@ const DRAW = {
   egg: () => part("M0 -11C7 -11 10 0 10 4C10 10 5 12 0 12C-5 12 -10 10 -10 4C-10 0 -7 -11 0 -11Z", "#f6ead8", { s: 1.6 }) + hi(-4, -4, 2.2, 3, 0.8),
   fertilizer: () => sack("#c8a878", "#a078c8"),
   deluxe_fertilizer: () => sack("#e8d8a8", "#f6c63c"),
+  bicycle: () => circle(-7, 4, 5.4, "#3a3a44", { s: 0.4 }) + circle(-7, 4, 3, "#c8ccd4", { s: 0, w: 0 }) + circle(7, 4, 5.4, "#3a3a44", { s: 0.4 }) + circle(7, 4, 3, "#c8ccd4", { s: 0, w: 0 }) + line("M-7 4L-2 -4L6 -5L7 4M-2 -4L0 4L-7 4M6 -5L6 -8", 2, "#e8566a") + line("M4 -8H9", 1.8, "#3a3a44") + part(ellD(-2.5, -5, 2.6, 1.1), "#6a4a3a", { s: 0.3, w: 0.9 }),
   mayonnaise: () => jar("#fff4d0", "#f6e6a8"),
   preserves_jar: () => part(rrD(-9, -9, 18, 20, 5), "#d4ecf4", { s: 1.6 }) + hi(-5, -4, 1.4, 3.4, 0.6) + part(rrD(-10, -13, 20, 5, 2), WOOD, { s: 0.8 }),
   mayo_machine: () => part(rrD(-11, -8, 22, 20, 4), "#efe2c6", { s: 1.6 }) + part(rrD(-5, -3, 10, 7, 2), "#f6d86a", { s: 0.6, w: 1.1 }) + part("M-7 -13L7 -13L4 -8H-4Z", "#c8b8a0", { s: 0.6, w: 1.1 }) + line("M11 0H14V-6", 2, INK),

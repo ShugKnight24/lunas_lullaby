@@ -33,6 +33,8 @@ const bindings = {
   friends: ["KeyR"],
   inventory: ["KeyI", "Tab"],
   craft: ["KeyK"],
+  sprint: ["ShiftLeft", "ShiftRight"],
+  bike: ["KeyB"],
   zoomIn: ["Equal", "NumpadAdd"],
   zoomOut: ["Minus", "NumpadSubtract"],
 };

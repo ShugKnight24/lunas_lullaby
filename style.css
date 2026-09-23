@@ -148,6 +148,12 @@ input.text:focus { box-shadow: 0 0 0 4px var(--rose-soft); }
 .dedication { margin: 14px 0 0; text-align: center; font: 600 14px var(--display); color: var(--cream); opacity: .85; text-shadow: 0 2px 0 var(--ink); }
 @media (max-width: 640px) { .wishes { grid-template-columns: 1fr; } }
 
+.paints { display: flex; gap: 4px; }
+.paint { width: 22px; height: 22px; border-radius: 50%; background: var(--c); border: 2px solid var(--ink); cursor: pointer; padding: 0; }
+.paint.on { box-shadow: 0 0 0 3px var(--cream), 0 0 0 5px var(--rose); }
+.buildcard.locked { opacity: .55; }
+.buildcard.locked .prev { filter: grayscale(1); }
+
 /* ── Dialogue ── */
 .dialogue {
   display: flex; gap: 16px; align-items: stretch; width: min(760px, 94vw);

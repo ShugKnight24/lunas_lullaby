@@ -19,7 +19,8 @@ import { addItem, countItem } from "../rules/inventory.js";
 import { seasonName, weekday } from "../rules/clock.js";
 import { affordable } from "../rules/structures.js";
 import { henHearts } from "../rules/animals.js";
-import { SKILLS, SKILL_NAMES, PERKS, PROFESSIONS, skillProgress, skillLevel, MAX_LEVEL } from "../rules/skills.js";
+import { SKILLS, SKILL_NAMES, PERKS, PROFESSIONS, skillProgress, skillLevel, MAX_LEVEL, XP } from "../rules/skills.js";
+import { award } from "../progress.js";
 import { RECIPES } from "../data/recipes.js";
 import { craft, missing, unlocked } from "../rules/crafting.js";
 import { skipTutorial } from "../rules/tutorial.js";
@@ -32,7 +33,8 @@ import { qualityName } from "../rules/quality.js";
 import { portraitSvg } from "../art/person.js";
 import { toSvg } from "../art/cozy-kit.js";
 import { resolveObject } from "../art/index.js";
-import { enterBuild, exitBuild, wallet } from "../build.js";
+import { enterBuild, exitBuild, wallet, costOf, canBuild } from "../build.js";
+import { PAINTS } from "../data/structures.js";
 import { writeSave } from "../game.js";
 import { toast } from "./hud.js";
 
@@ -289,23 +291,25 @@ export function createUI(root) {
       const d = STRUCTURES[type];
       const o = { kind: "structure", type, mask: 3 };
       resolveObject(o, g.s.clock.season);
-      const cost = Object.entries(d.cost).map(([k, v]) => h(`span.cost${(w[k] ?? 0) >= v ? "" : ".short"}`, {}, `${v} ${k === "gold" ? "g" : k}`));
-      const can = affordable(d.cost, w);
+      const known = canBuild(g, type);
+      const c = costOf(g, type);
+      const cost = Object.entries(c).map(([k, v]) => h(`span.cost${(w[k] ?? 0) >= v ? "" : ".short"}`, {}, `${v} ${k === "gold" ? "g" : k}`));
+      const can = known && affordable(c, w);
       return h(
-        `div.buildcard${can ? "" : ".dim"}`,
-        { onclick: () => (close(), enterBuild(g, type)) },
+        `div.buildcard${can ? "" : ".dim"}${known ? "" : ".locked"}`,
+        { onclick: () => (known ? (close(), enterBuild(g, type)) : toast(g, `Learn it at Building level ${d.level}.`)) },
         h("div.prev", { html: toSvg(o.spr, "prev") }),
         h("b", {}, d.name),
-        h("small", {}, d.desc),
-        h("div.costs", {}, cost),
+        h("small", {}, known ? d.desc : `Building level ${d.level}`),
+        known ? h("div.costs", {}, cost) : null,
       );
     });
     const box = h(
       "div.panel.wide",
       {},
-      h("header", {}, h("h2", {}, "Theo's Build Board"), h("div.gold", {}, `${g.s.gold.toLocaleString()}g · ${w.wood} wood · ${w.stone} stone`)),
+      h("header", {}, h("h2", {}, "Theo's Build Board"), h("div.gold", {}, `${g.s.gold.toLocaleString()}g · ${w.wood} wood · ${w.stone} stone · ${w.fiber} fiber`)),
       h("div.buildgrid", {}, cards),
-      h("p.note", {}, "Chop trees and break rocks with the axe for wood and stone. In build mode: WASD pans, click places, right-click or Esc exits."),
+      h("p.note", {}, "Building skill: every structure you put up teaches you more — new fences and decorations unlock, materials stretch further, and from level 6 you build it yourself with no gold fee. In build mode: WASD pans, click places, right-click or Esc exits."),
       h("div.row", {}, h("button.btn", { onclick: () => (close(), enterBuild(g, "fence"), (g.build.mode = "move"), ui.buildBar(true)) }, "Move buildings"), h("button.btn", { onclick: () => (close(), enterBuild(g, "fence"), (g.build.mode = "remove"), ui.buildBar(true)) }, "Remove buildings"), h("button.btn", { onclick: close }, "Close")),
     );
     open(box);
@@ -322,9 +326,20 @@ export function createUI(root) {
       const w = wallet(g);
       const d = STRUCTURES[b.type];
       const btn = (mode, label) => h(`button.btn${b.mode === mode ? ".primary" : ""}`, { onclick: () => ((b.mode = mode), draw()) }, label);
+      const paints =
+        b.mode === "place" && d.paint
+          ? h(
+              "div.paints",
+              { role: "radiogroup", "aria-label": "Paint colour" },
+              PAINTS.map((c) =>
+                h(`button.paint${(b.color ?? null) === c ? ".on" : ""}`, { role: "radio", "aria-checked": (b.color ?? null) === c, "aria-label": c ? `Paint ${c}` : "Natural wood", title: c ? "Paint" : "Natural", style: c ? `--c:${c}` : "--c:#c98a4a", onclick: () => ((b.color = c), draw()) }),
+              ),
+            )
+          : null;
       bar.replaceChildren(
         h("b", {}, b.mode === "place" ? `Placing: ${d.name}` : b.mode === "move" ? "Move: click a building" : "Remove: click a building (half refund)"),
         h("span.mats", {}, `${g.s.gold.toLocaleString()}g · ${w.wood} wood · ${w.stone} stone`),
+        paints,
         btn("place", "Place"),
         btn("move", "Move"),
         btn("remove", "Remove"),
@@ -420,6 +435,7 @@ export function createUI(root) {
                 const make = () => {
                   const res = craft(r, g.s.inv, levels);
                   if (res.error) return toast(g, res.error);
+                  award(g, "building", XP.craft(r.in));
                   toast(g, `Crafted ${n > 1 ? `${n} × ` : ""}${ITEMS[out].name}`, out);
                   draw();
                 };

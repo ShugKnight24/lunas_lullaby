@@ -81,7 +81,7 @@ describe("game save", () => {
       soil: { [soilKey(FARM_WELL.tx + 1, FARM_WELL.ty)]: { watered: false, crop: null }, 2325: { watered: false, crop: null } },
     };
     const s = migrateSave(v3);
-    expect(s.skills).toEqual({ farming: 0, foraging: 0, fishing: 0, ranching: 0 });
+    expect(s.skills).toEqual({ farming: 0, foraging: 0, fishing: 0, ranching: 0, building: 0 });
     expect(s.tutorial.done).toBe(true);
     expect(s.flags.intro).toBe(true);
     expect(s.structures.map((st) => st.uid)).toEqual([2]);
