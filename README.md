@@ -24,6 +24,7 @@ If Playwright's bundled browser isn't installed, point `CHROME_PATH` at a local 
 | F | Mount / dismount the horse |
 | B | Hop on / off the bicycle (outdoors) |
 | M | Mute / unmute (volumes are in the pause menu) |
+| N | Show / hide the minimap |
 | Shift | Sprint |
 | 1–9 / mouse wheel | Choose hotbar slot |
 | J · R · I (Tab) · K | Journal · Friends tab · Bag tab · Craft tab |
@@ -85,6 +86,10 @@ src/game/ui/               canvas HUD, DOM panels (dialogue, shop, build, journa
 tests/unit/                vitest suites for the rules and save migrations
 tests/e2e/                 playwright specs driving window.__game
 ```
+
+## Minimap
+
+Bottom-left (above the hotbar on phones): the whole valley painted from the map — fields, paths, water, forest, buildings, your structures and tilled soil — with dots for you, your companion, the horse and villagers, a frame for what's on screen, and a star on the current first-day task. Secret places look like plain meadow until you find them. N shows or hides it (remembered per browser).
 
 ## Sound
 

@@ -556,7 +556,7 @@ export function createUI(root) {
       ["1–9 / Wheel", "Choose hotbar slot"],
       ["J · R · I · K", "Journal · Friends · Bag · Craft"],
       ["Shift · B", "Sprint · Ride the bike"],
-      ["M", "Mute / unmute"],
+      ["M · N", "Mute · Show/hide the map"],
       ["+ / −", "Zoom"],
       ["Esc", "Pause"],
     ];

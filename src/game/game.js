@@ -32,6 +32,7 @@ import { updateBuild, exitBuild, fenceMasks } from "./build.js";
 import { updateFishing } from "./fishing.js";
 import { renderGame } from "./render.js";
 import { toast, updateHud, hotbarSlotAt } from "./ui/hud.js";
+import { toggleMinimap } from "./ui/minimap.js";
 import { queueIntro, updateIntro, updateProfessions, playFinale } from "./progress.js";
 import { sfx } from "./audio/sfx.js";
 
@@ -383,6 +384,7 @@ export function update(g, dt, t) {
     const step = Math.floor(p.walkT * 4);
     if (step !== p.lastStep) (p.lastStep = step), sfx(g, "step");
   }
+  if (input.pressed("minimap")) toast(g, toggleMinimap() ? "Map shown (N)" : "Map hidden (N)");
   if (input.pressed("mute")) {
     g.audio.set("muted", !g.audio.settings.muted);
     toast(g, g.audio.settings.muted ? "Sound off (M)" : "Sound on (M)");

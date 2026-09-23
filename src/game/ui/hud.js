@@ -1,7 +1,7 @@
 /**
  * Cozy canvas HUD: clock/date/season/weather dial, gold and tonight's
  * shipping, energy bar, the hotbar with item icons, the E prompt bubble,
- * toasts, the fishing bar and the tutorial's world arrow.
+ * toasts, the fishing bar, the tutorial's world arrow and the minimap.
  * Static panel art is baked once per size into offscreen canvases; only
  * text, bars and icons are drawn per frame, from cached strings.
  */
@@ -16,6 +16,7 @@ import { sellMult } from "../rules/skills.js";
 import { TUTORIAL } from "../data/tutorial.js";
 import { FARM_WELL, BIN } from "../world/map.js";
 import { doorOf } from "../actors/actors.js";
+import { drawMinimap, minimapRect } from "./minimap.js";
 import { drawSvgSprite } from "../../engine/sprite.js";
 import { DEFS, iconSpr, iconKey } from "../art/index.js";
 
@@ -407,17 +408,21 @@ function drawToasts(ctx, view, g, t, k) {
   ctx.globalAlpha = 1;
 }
 
-/** World point (art units) the current tutorial step points at, or null. */
-function tutorialPoint(g) {
+/**
+ * Point (art units, in the current level) the current tutorial step points
+ * at, or null. `anywhere` gives the outdoor spot even while you're indoors
+ * (for the minimap).
+ */
+function tutorialPoint(g, anywhere = false) {
   const tut = g.s.tutorial;
   const step = !tut.done && g.s.flags.intro && TUTORIAL[tut.step];
   if (!step?.point) return null;
   const T = 32;
-  if (step.point === "house" && g.lv.id === "house") {
+  if (!anywhere && step.point === "house" && g.lv.id === "house") {
     const bed = g.lv.objects.find((o) => o.name === "bed");
     return bed && [bed.x, bed.y - 70];
   }
-  if (g.lv.id !== "world") return null;
+  if (!anywhere && g.lv.id !== "world") return null;
   if (step.point === "well") return [(FARM_WELL.tx + 1) * T, FARM_WELL.ty * T - 30];
   if (step.point === "bin") return [(BIN.tx + 0.5) * T, BIN.ty * T - 20];
   if (step.point === "house") {
@@ -497,6 +502,7 @@ export function drawHud(ctx, view, g, t, ox, oy, z) {
   if (g.mode === "fishing") drawFishingBar(ctx, g, ox, oy, z, k);
   drawClock(ctx, view, g, k);
   drawEnergy(ctx, view, g, k);
+  if (g.mode === "play" || g.mode === "fishing") drawMinimap(ctx, g, t, minimapRect(view, hotbarRect(view), g.levels.world), (w, h, x, y) => blitPanel(ctx, w, h, 14, x, y, k), tutorialPoint(g, true));
   drawHotbar(ctx, view, g, t, k);
   drawToasts(ctx, view, g, t, k);
 }

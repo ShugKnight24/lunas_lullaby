@@ -40,6 +40,7 @@ const bindings = {
   sprint: ["ShiftLeft", "ShiftRight"],
   bike: ["KeyB"],
   mute: ["KeyM"],
+  minimap: ["KeyN"],
   zoomIn: ["Equal", "NumpadAdd"],
   zoomOut: ["Minus", "NumpadSubtract"],
 };

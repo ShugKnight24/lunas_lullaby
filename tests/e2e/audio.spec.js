@@ -38,3 +38,21 @@ test("sound starts on the first click, plays music and effects without clipping,
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("luna_audio")).music)).toBe(0.25);
   expect(errors).toEqual([]);
 });
+
+test("the minimap shows by default, N hides it, and the choice sticks", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForFunction(() => window.__game);
+  await page.evaluate(() => {
+    localStorage.removeItem("luna_minimap");
+    window.__game.newGame(undefined, { intro: false });
+  });
+  // Sample a pixel inside the map area (bottom-left) with the map on, then off.
+  const px = () => page.evaluate(() => Array.from(document.getElementById("game").getContext("2d").getImageData(60, 620, 1, 1).data).slice(0, 3).join(","));
+  await page.waitForTimeout(500);
+  const on = await px();
+  await page.keyboard.press("KeyN");
+  await page.waitForTimeout(300);
+  const off = await px();
+  expect(on).not.toBe(off);
+  expect(await page.evaluate(() => localStorage.getItem("luna_minimap"))).toBe("off");
+});
