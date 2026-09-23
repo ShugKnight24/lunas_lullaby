@@ -154,6 +154,12 @@ input.text:focus { box-shadow: 0 0 0 4px var(--rose-soft); }
 .buildcard.locked { opacity: .55; }
 .buildcard.locked .prev { filter: grayscale(1); }
 
+.volumes { margin: 14px 0 6px; display: grid; gap: 6px; }
+.volumes h3 { margin: 0 0 2px; font-family: var(--display); }
+.vol { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 10px; font-weight: 600; }
+.vol input[type=range] { accent-color: var(--rose); width: 100%; }
+.vol input[type=checkbox] { accent-color: var(--rose); width: 20px; height: 20px; justify-self: start; }
+
 /* ── Dialogue ── */
 .dialogue {
   display: flex; gap: 16px; align-items: stretch; width: min(760px, 94vw);

@@ -14,6 +14,7 @@ import { QUALITY } from "./rules/quality.js";
 import { toolEnergy, fishingZone, XP, has } from "./rules/skills.js";
 import { countItem } from "./rules/inventory.js";
 import { award, level } from "./progress.js";
+import { sfx } from "./audio/sfx.js";
 import { give } from "./actions.js";
 import { removeItem } from "./rules/inventory.js";
 import { setEnergy } from "./game.js";
@@ -32,6 +33,7 @@ export function startFishing(g) {
   const cost = toolEnergy(ITEMS.rod.energy, level(g, "fishing"));
   if (g.s.energy < cost) return toast(g, "You're too tired to fish.");
   setEnergy(g, g.s.energy - cost);
+  sfx(g, "cast");
   const k = Math.min(3, hit + 1);
   const f = g.fishing;
   f.on = true;
@@ -75,10 +77,12 @@ export function updateFishing(g, dt) {
   if (input.pressed("pause")) return end(g);
   if (f.phase === "cast" && f.t > 0.4) {
     f.phase = "wait";
+    sfx(g, "splash");
     f.t = 0;
     burst(FXK.SPLASH, f.bx, f.by, 6, 50, 0.5, "#cfeeff");
   } else if (f.phase === "wait") {
     if (press) {
+      sfx(g, "miss");
       toast(g, "Too early! The fish swam off.");
       return end(g);
     }
@@ -88,10 +92,12 @@ export function updateFishing(g, dt) {
         return end(g);
       }
       (f.phase = "bite"), (f.t = 0), burst(FXK.SPLASH, f.bx, f.by, 8, 60, 0.5, "#cfeeff");
+      sfx(g, "bite");
     }
   } else if (f.phase === "bite") {
     if (press) (f.phase = "reel"), (f.t = 0);
     else if (f.t > f.biteWin) {
+      sfx(g, "miss");
       toast(g, "It got away...");
       return end(g);
     }
@@ -101,7 +107,7 @@ export function updateFishing(g, dt) {
     else if (f.pos < 0) (f.pos = -f.pos), (f.vel = -f.vel);
     if (press) {
       const q = catchQuality(f.pos, f.zone, f.zoneW, f.lucky);
-      if (q === null) toast(g, "Snap! The line went slack.");
+      if (q === null) sfx(g, "miss"), toast(g, "Snap! The line went slack.");
       else if (give(g, f.fish, 1, f.bx, f.by, q)) {
         const first = !g.s.fishLog[f.fish];
         g.s.fishLog = logCatch(g.s.fishLog, f.fish, q);
@@ -109,11 +115,14 @@ export function updateFishing(g, dt) {
         if (first) toast(g, `New fish for your log: ${FISH[f.fish].name}!`, f.fish);
         else if (q === 2) toast(g, "Perfect catch!");
         burst(FXK.SPLASH, f.bx, f.by, 12, 90, 0.7, "#cfeeff");
+        sfx(g, "catch");
+        if (q) sfx(g, "quality");
         if (q) burst(FXK.SPARK, f.bx, f.by - 10, 8, 80, 0.7, QUALITY[q].color);
       }
       return end(g);
     }
     if (f.t > 6) {
+      sfx(g, "miss");
       toast(g, "The fish wriggled free.");
       return end(g);
     }

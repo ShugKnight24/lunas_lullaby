@@ -20,6 +20,7 @@ import { sellPrice, qualityName } from "./rules/quality.js";
 import { TOOL_SKILL, toolEnergy, XP, farmingBonus, forageDouble, ranchingPet, has, sellMult } from "./rules/skills.js";
 import { HEN_LOVE } from "./rules/animals.js";
 import { award, progress, level } from "./progress.js";
+import { sfx } from "./audio/sfx.js";
 import { plant, water, harvest, isRipe, clearDead, emptySoil, fertilize } from "./rules/crops.js";
 import { shipItem } from "./rules/shipping.js";
 import { dayIndex } from "./rules/clock.js";
@@ -111,6 +112,7 @@ export function useTool(g) {
     if (o && !o.gone && o.kind === "weed") {
       removeObj(g, o);
       burst(FXK.LEAF, x, y, 6, 40, 0.8, "#7cc05a");
+      sfx(g, "scythe");
       if (Math.random() < 0.6) give(g, "fiber", 1, x, y);
       return;
     }
@@ -144,6 +146,7 @@ function hoe(g, tx, ty, o) {
   g.s.soil[idx] = { ...emptySoil(), watered: g.s.weather === "rain" };
   syncSoil(g, idx);
   burst(FXK.DUST, x, y + 6, 6, 50, 0.5, "rgba(170,120,80,0.8)");
+  sfx(g, "hoe");
   progress(g, "till");
 }
 
@@ -158,6 +161,7 @@ function waterTile(g, tx, ty, o) {
   if (isWaterSource(g, tx, ty, o)) {
     g.s.water = CAN_CAPACITY;
     burst(FXK.SPLASH, x, y, 8, 70, 0.6, "#bfe6ff");
+    sfx(g, "refill");
     progress(g, "refill");
     return toast(g, "Watering can refilled!", "can");
   }
@@ -167,6 +171,7 @@ function waterTile(g, tx, ty, o) {
   if (g.s.water <= 0) return toast(g, "Your watering can is empty. Refill it at the pond or a well.");
   g.s.water--;
   g.s.soil[idx] = water(t);
+  sfx(g, "water");
   if (t.crop) progress(g, "water");
   for (let i = 0; i < 6; i++) spawnFx(FXK.DROP, x + (Math.random() - 0.5) * 16, y - 18, (Math.random() - 0.5) * 30, 20, 0.45, "#8fd0ff");
 }
@@ -183,6 +188,7 @@ function sow(g, slot, tx, ty) {
   g.player.useT = 0.18;
   g.player.useItem = null;
   burst(FXK.DUST, cx(tx), cy(ty) + 6, 3, 25, 0.4, "rgba(170,120,80,0.7)");
+  sfx(g, "plant");
   progress(g, "plant");
 }
 
@@ -195,6 +201,7 @@ function placeMachine(g, slot, tx, ty) {
   const o = addStructureObject(g, st);
   takeFromSlot(g.s.inv, g.s.sel);
   burst(FXK.DUST, o.x, o.y, 8, 50, 0.5, "rgba(200,170,130,0.8)");
+  sfx(g, "build");
 }
 
 /** E at a machine: collect a finished product, or load what's in hand. */
@@ -207,6 +214,7 @@ function tendMachine(g, o) {
     if (!give(g, got.item, 1, o.x, o.y - 20, got.q)) return;
     g.s.structures[i] = got.st;
     award(g, o.type === "mayo_machine" ? "ranching" : "farming", 8);
+    sfx(g, got.q ? "quality" : "pickup");
     return refreshMachine(g, o, got.st);
   }
   const slot = selected(g);
@@ -216,6 +224,7 @@ function tendMachine(g, o) {
   takeFromSlot(g.s.inv, g.s.sel);
   g.s.structures[i] = r.st;
   refreshMachine(g, o, r.st);
+  sfx(g, "craft");
   toast(g, `${m.name} is working on your ${ITEMS[r.st.input].name}.`, r.st.input);
 }
 
@@ -255,6 +264,8 @@ function reap(g, idx, tx, ty) {
   const d = g.cropDraw.get(idx);
   if (d) d.pop = 0.4;
   burst(FXK.SPARK, cx(tx), cy(ty) - 12, 8, 90, 0.7, "#fff2a0");
+  sfx(g, "harvest");
+  if (h.q) sfx(g, "quality");
   burst(FXK.LEAF, cx(tx), cy(ty) - 6, 4, 50, 0.6, def.accent);
   return true;
 }
@@ -266,6 +277,7 @@ function chop(g, o) {
   if (o.kind === "tree") {
     o.hp--;
     burst(FXK.CHIP, x, y - 20, 4, 70, 0.5, "#c8945a");
+    sfx(g, "chop");
     if (!o.stump && g.s.clock.season !== 3) burst(FXK.LEAF, x + (Math.random() - 0.5) * 40, y - 70, 3, 30, 1.2, o.variant === "pine" ? "#4f9570" : "#f0a040");
     if (o.hp <= 0) {
       if (!o.stump) {
@@ -286,6 +298,7 @@ function chop(g, o) {
   if (o.kind === "rock") {
     o.hp--;
     burst(FXK.CHIP, x, y - 10, 5, 80, 0.5, "#b5acb6");
+    sfx(g, "rock");
     if (o.hp <= 0) {
       removeObj(g, o);
       give(g, "stone", o.small ? 1 : 3, x, y);
@@ -304,6 +317,7 @@ function eat(g) {
   if (g.s.energy >= MAX_ENERGY) return toast(g, "You're not hungry right now.");
   takeFromSlot(g.s.inv, g.s.sel);
   setEnergy(g, g.s.energy + def.energy);
+  sfx(g, "eat");
   toast(g, `Yum! ${def.name} restored ${def.energy} energy.`, slot.id);
 }
 
@@ -409,6 +423,7 @@ export function interact(g) {
       if (give(g, fo.item, n, cx(tx), cy(ty))) {
         g.s.forage[sp.id] = { item: null, next: today(g) + FORAGE_RESPAWN_DAYS };
         award(g, "foraging", XP.forage);
+        sfx(g, "pickup");
         progress(g, "forage");
       }
       return;
@@ -424,6 +439,7 @@ function ship(g) {
   const def = slot && ITEMS[slot.id];
   if (!def || def.kind === "tool" || !def.sell) return toast(g, "Hold something to sell, then press E at the bin.");
   g.s.bin = shipItem(g.s.bin, slot.id, slot.n, slot.q);
+  sfx(g, "ship");
   progress(g, "ship");
   const each = Math.round(sellPrice(def.sell, slot.q) * sellMult(g.s.professions, slot.id, def));
   toast(g, `Shipped ${slot.n} × ${qualityName(def.name, slot.q)} (${slot.n * each}g tonight)`, slot.id);
@@ -454,6 +470,7 @@ function petChicken(g, c) {
   if (!r.gained) return toast(g, `${r.hen.name} is content. ${hearts}`);
   burst(FXK.HEART, c.x, c.y - 20, 3, 30, 1);
   award(g, "ranching", XP.petHen);
+  sfx(g, "cluck");
   toast(g, `${r.hen.name} clucks happily! ${hearts}`, "egg");
 }
 
@@ -470,6 +487,7 @@ function tendCoop(g, o) {
     award(g, "ranching", XP.egg * got);
     toast(g, `+${got} Egg${got > 1 ? "s" : ""}${fine ? ` (${fine} extra fine!)` : ""}`, "egg");
     burst(FXK.SPARK, o.x, o.y - 40, 6, 60, 0.6, "#fff6c8");
+    sfx(g, "pickup");
     return;
   }
   const slot = selected(g);
@@ -478,6 +496,7 @@ function tendCoop(g, o) {
   if (!r.used) return toast(g, "The feed bin is full.");
   takeFromSlot(g.s.inv, g.s.sel, r.used);
   st.hay = r.st.hay;
+  sfx(g, "plant");
   toast(g, `Stocked ${r.used} ${ITEMS[slot.id].name} · ${st.hay}/${COOP_HAY_CAP} hay`, slot.id);
 }
 
@@ -485,6 +504,8 @@ function petPet(g) {
   const a = g.pet;
   const d = today(g);
   burst(FXK.HEART, a.x, a.y - 22, g.s.pet.petted === d ? 1 : 4, 30, 1.1);
+  sfx(g, "pet");
+  if (g.s.profile.pet.kind === "anatolian" || g.s.profile.pet.kind === "dog") sfx(g, "woof");
   a.state = "sit";
   a.stateT = 2;
   if (g.s.pet.petted !== d) {
@@ -505,6 +526,7 @@ export function toggleBike(g) {
   if (!countItem(g.s.inv, "bicycle")) return;
   if (!g.lv.outdoor) return toast(g, "Bikes stay outside.");
   p.biking = true;
+  sfx(g, "bell");
   burst(FXK.DUST, p.x, p.y, 5, 40, 0.4, "rgba(200,170,130,0.7)");
 }
 
@@ -546,6 +568,7 @@ export function toggleMount(g) {
 
 function chat(g, v) {
   progress(g, "talk");
+  sfx(g, "talk");
   const rel = g.s.rel[v.id];
   const slot = selected(g);
   const d = today(g);
@@ -564,6 +587,7 @@ function chat(g, v) {
   const ev = (HEART_EVENTS[v.id] ?? []).find((e) => eventReady(rel, e));
   if (ev) {
     g.s.rel[v.id] = { ...rel, events: { ...rel.events, [ev.hearts]: true } };
+    sfx(g, "heart");
     return g.ui.dialogue(v, ev.lines.map((l) => fillLine(l, vars)), () => ev.reward && give(g, ev.reward, ev.n ?? 1, p.x, p.y), true);
   }
   const ctx = { season: g.s.clock.season, weather: g.s.weather, hearts: hearts(rel), day: d, met: rel.met };

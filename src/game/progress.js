@@ -15,6 +15,7 @@ import { tutorialEvent } from "./rules/tutorial.js";
 import { addItem } from "./rules/inventory.js";
 import { burst, FXK } from "./world/weather.js";
 import { toast } from "./ui/hud.js";
+import { sfx } from "./audio/sfx.js";
 
 export const level = (g, id) => skillLevel(g.s.skills[id]);
 
@@ -72,6 +73,7 @@ export function award(g, id, xp) {
   g.s.skills = r.skills;
   if (!r.levelUp) return;
   toast(g, `${SKILL_NAMES[id]} reached level ${r.levelUp}!`);
+  sfx(g, "levelUp");
   burst(FXK.SPARK, g.player.x, g.player.y - 50, 14, 90, 1, "#fff2a0");
   g.levelUp = { id, level: r.levelUp, t: 3 };
 }
@@ -82,6 +84,7 @@ export function progress(g, event) {
   if (r.tut === g.s.tutorial) return;
   g.s.tutorial = r.tut;
   g.tutFlash = 1.2;
+  sfx(g, "task");
   if (!r.finished) return;
   for (const [id, n] of TUTORIAL_REWARD) addItem(g.s.inv, id, n);
   toast(g, `All set! Mira left you a gift: ${TUTORIAL_REWARD.map(([id, n]) => `${n} ${ITEMS[id].name}`).join(" & ")}.`, TUTORIAL_REWARD[0][0]);

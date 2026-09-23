@@ -23,6 +23,7 @@ If Playwright's bundled browser isn't installed, point `CHROME_PATH` at a local 
 | E / right click | Talk, give a gift, pet, ride, ship, harvest, forage, sleep, shop, build |
 | F | Mount / dismount the horse |
 | B | Hop on / off the bicycle (outdoors) |
+| M | Mute / unmute (volumes are in the pause menu) |
 | Shift | Sprint |
 | 1–9 / mouse wheel | Choose hotbar slot |
 | J · R · I (Tab) · K | Journal · Friends tab · Bag tab · Craft tab |
@@ -84,6 +85,15 @@ src/game/ui/               canvas HUD, DOM panels (dialogue, shop, build, journa
 tests/unit/                vitest suites for the rules and save migrations
 tests/e2e/                 playwright specs driving window.__game
 ```
+
+## Sound
+
+All sound is synthesized with the Web Audio API — no audio files, like the art. It starts on your first click or key press (browsers require a gesture).
+
+- **Music** (`src/game/audio/score.js`, `music.js`): each day gets its own gentle tune, generated from the day's seed in a scale and tempo for the season (spring music box in C, summer flute in F lydian, fall flute in A minor, winter bells in D dorian); after 8pm it slows into a music box. *Luna's Lullaby*, a hand-written theme, plays on the title screen, in the dream scenes and over the night summary. Indoors the music is muffled; it ducks under dialogue.
+- **Effects** (`sfx.js`): a small synthesized sound for every action, varied slightly each time.
+- **Ambience**: rain, birdsong by day, crickets at night.
+- **Mixing** (`src/engine/audio.js`): music, effects and ambience buses into a master with a soft room reverb. Volumes are saved per browser (pause menu, or M to mute), and sound pauses when the tab is hidden.
 
 ## Art pipeline
 

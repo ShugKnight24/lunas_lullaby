@@ -33,6 +33,7 @@ import { updateFishing } from "./fishing.js";
 import { renderGame } from "./render.js";
 import { toast, updateHud, hotbarSlotAt } from "./ui/hud.js";
 import { queueIntro, updateIntro, updateProfessions, playFinale } from "./progress.js";
+import { sfx } from "./audio/sfx.js";
 
 const WORLD_DATA = buildWorld(7);
 
@@ -222,6 +223,7 @@ export function goTo(g, levelId, tx, ty, dir) {
   if (g.fade.target === 1) return;
   const busy = g.mode;
   g.mode = "fade";
+  sfx(g, "door");
   fadeOut(g, () => {
     g.lv = g.levels[levelId];
     if (!g.lv.outdoor) g.player.biking = false;
@@ -376,6 +378,15 @@ export function update(g, dt, t) {
   p.sprinting = input.down("sprint");
   if (movePlayer(p, g.lv, ax, ay, dt, moveMult(p, p.sprinting)) && p.sprinting && !p.mounted && !p.biking && Math.random() < dt * 14) spawnFx(FXK.DUST, p.x - (ax || 0) * 8, p.y, -(ax || 0) * 20, -10, 0.35, "rgba(200,170,130,0.6)");
   if (input.pressed("bike")) toggleBike(g);
+  // Soft footsteps, twice per walk cycle (not on the horse or the bike).
+  if (p.moving && !p.mounted && !p.biking) {
+    const step = Math.floor(p.walkT * 4);
+    if (step !== p.lastStep) (p.lastStep = step), sfx(g, "step");
+  }
+  if (input.pressed("mute")) {
+    g.audio.set("muted", !g.audio.settings.muted);
+    toast(g, g.audio.settings.muted ? "Sound off (M)" : "Sound on (M)");
+  }
   if (p.mounted) {
     g.horse.x = p.x;
     g.horse.y = p.y;

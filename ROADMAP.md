@@ -21,7 +21,7 @@ Thin or missing:
 | Social | 3 villagers; heart events are a single 2-heart stub; schedules are by hour only (no day/weather variation) |
 | Winter | ~~No winter crops~~ Moonbloom grows in winter; winter fish. Still no festival |
 | Progression | Skills (5, incl. Building), professions, crafting, machines, fence styles/paint done. No tool upgrades or long-term goal yet |
-| Audio | None |
+| Audio | ~~None~~ done: generated seasonal music, the lullaby theme, effects, ambience, volume controls |
 | Saves | ~~No migrations~~ done: v2 with a migration chain and a frozen v1 fixture |
 | Tests | ~~Rules only~~ done: Playwright day-loop, coop, fishing, onboarding and well specs |
 | Onboarding | ~~None~~ done: intro letter + Mira's welcome, 8-step first-day task card with world arrows |

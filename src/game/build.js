@@ -10,6 +10,7 @@ import { STRUCTURES } from "./data/structures.js";
 import { canPlace, affordable, refund, buildCost } from "./rules/structures.js";
 import { skillLevel, has, XP, DIY_LEVEL } from "./rules/skills.js";
 import { award } from "./progress.js";
+import { sfx } from "./audio/sfx.js";
 import { newCoop } from "./rules/animals.js";
 import { countItem, removeItem, addItem } from "./rules/inventory.js";
 import { GR, inFarm, FARM } from "./world/map.js";
@@ -163,6 +164,7 @@ export function placeStructure(g, type, tx, ty) {
   const o = addStructureObject(g, st);
   fenceMasks(g);
   burst(FXK.DUST, o.x, o.y, 10, 60, 0.6, "rgba(200,170,130,0.8)");
+  sfx(g, "build");
   award(g, "building", XP.build(def.cost));
   return true;
 }

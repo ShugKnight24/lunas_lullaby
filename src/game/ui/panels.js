@@ -21,6 +21,7 @@ import { affordable } from "../rules/structures.js";
 import { henHearts } from "../rules/animals.js";
 import { SKILLS, SKILL_NAMES, PERKS, PROFESSIONS, skillProgress, skillLevel, MAX_LEVEL, XP } from "../rules/skills.js";
 import { award } from "../progress.js";
+import { sfx } from "../audio/sfx.js";
 import { RECIPES } from "../data/recipes.js";
 import { craft, missing, unlocked } from "../rules/crafting.js";
 import { skipTutorial } from "../rules/tutorial.js";
@@ -194,11 +195,13 @@ export function createUI(root) {
     };
     const next = () => {
       if (++i < lines.length) return show();
+      ui.dreaming = false;
       close();
       onDone?.();
     };
     btn.onclick = next;
     const box = h("div.dream", { onclick: (e) => e.target === btn || next() }, text, btn);
+    ui.dreaming = true;
     const wrap = open(box, { cls: "dreamy", closable: false, onKey: (e) => (["Enter", "Space", "KeyE"].includes(e.code) ? (next(), true) : false) });
     wrap.prepend(h("div.dreammoon", { "aria-hidden": "true" }));
     show();
@@ -435,6 +438,7 @@ export function createUI(root) {
                 const make = () => {
                   const res = craft(r, g.s.inv, levels);
                   if (res.error) return toast(g, res.error);
+                  sfx(g, "craft");
                   award(g, "building", XP.craft(r.in));
                   toast(g, `Crafted ${n > 1 ? `${n} × ` : ""}${ITEMS[out].name}`, out);
                   draw();
@@ -526,6 +530,21 @@ export function createUI(root) {
     open(box, { onKey: (e) => (e.code === "KeyJ" || e.code === "KeyR" || e.code === "KeyI" || e.code === "KeyK" ? (close(), true) : false) });
   };
 
+  /** Volume sliders (saved per browser) and a mute toggle. */
+  function volumes(a) {
+    const slider = (key, label) => {
+      const id = `vol-${key}`;
+      return h(
+        "div.vol",
+        {},
+        h("label", { for: id }, label),
+        h("input", { id, type: "range", min: 0, max: 100, value: Math.round(a.settings[key] * 100), oninput: (e) => a.set(key, e.target.value / 100) }),
+      );
+    };
+    const mute = h("input", { id: "vol-mute", type: "checkbox", checked: a.settings.muted, onchange: (e) => a.set("muted", e.target.checked) });
+    return h("div.volumes", {}, h("h3", {}, "Sound"), slider("master", "Volume"), slider("music", "Music"), slider("sfx", "Sounds"), slider("ambience", "Ambience"), h("div.vol", {}, h("label", { for: "vol-mute" }, "Mute (M)"), mute));
+  }
+
   // ── Pause ──
   ui.pause = () => {
     const g = ui.g;
@@ -536,6 +555,8 @@ export function createUI(root) {
       ["F", "Mount / dismount the horse"],
       ["1–9 / Wheel", "Choose hotbar slot"],
       ["J · R · I · K", "Journal · Friends · Bag · Craft"],
+      ["Shift · B", "Sprint · Ride the bike"],
+      ["M", "Mute / unmute"],
       ["+ / −", "Zoom"],
       ["Esc", "Pause"],
     ];
@@ -544,6 +565,7 @@ export function createUI(root) {
       {},
       h("h2", {}, "Paused"),
       h("div.controls", {}, keys.map(([k, d]) => h("div.ctl", {}, h("kbd", {}, k), h("span", {}, d)))),
+      volumes(g.audio),
       h("div.row", {}, h("button.btn.primary", { onclick: close }, "Resume"), h("button.btn", { onclick: () => (writeSave(g), toast(g, "Game saved."), close()) }, "Save"), h("button.btn", { onclick: () => (writeSave(g), close(), ui.onQuit?.()) }, "Save & Quit")),
       g.s.tutorial.done ? null : h("div.row", {}, h("button.btn.link", { onclick: () => ((g.s.tutorial = skipTutorial(g.s.tutorial, TUTORIAL)), close()) }, "Skip the first-day tasks")),
     );
@@ -575,6 +597,7 @@ export function createUI(root) {
       h("div.row", {}, h("button.btn.primary", { onclick: () => (close(), onContinue()) }, "Good morning!")),
     );
     open(box, { closable: false, onKey: (e) => (e.code === "Enter" || e.code === "Space" || e.code === "KeyE" ? (close(), onContinue(), true) : false) });
+    if (report.wishes?.length) setTimeout(() => sfx(ui.g, "wish"), 400);
   };
 
   return ui;
