@@ -16,7 +16,7 @@ If Playwright's bundled browser isn't installed, point `CHROME_PATH` at a local 
 
 ## CI and deploy
 
-GitHub Actions runs the unit tests, the build and the Playwright specs on every pull request (`.github/workflows/ci.yml`). Pushing to `main` builds the game and publishes `dist/` to GitHub Pages (`.github/workflows/deploy.yml`).
+GitHub Actions runs the unit tests, the build and the Playwright specs on every pull request and on `master` (`.github/workflows/ci.yml`). The game is hosted on Vercel through its GitHub integration: `master` deploys to production and every pull request gets a preview URL. Build settings are pinned in `vercel.json` (Vite, `npm run build`, output `dist/`, long-lived caching for hashed assets).
 
 ## Controls
 
