@@ -136,6 +136,14 @@ input.text:focus { box-shadow: 0 0 0 4px var(--rose-soft); }
 .slot.pick { background: var(--rose-soft); transform: translateY(-3px); }
 .slot .ico svg { width: 42px; height: 42px; }
 .slot .n { position: absolute; right: 5px; bottom: 2px; font: 700 13px var(--display); color: #fff; -webkit-text-stroke: 3px var(--ink); paint-order: stroke; }
+.slot .q { position: absolute; left: 5px; bottom: 1px; font: 700 15px var(--display); -webkit-text-stroke: 2px var(--ink); paint-order: stroke; }
+.slot .q1 { color: #c8d4e0; }
+.slot .q2 { color: #f6c63c; }
+.fishlog { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.fishcard { display: grid; justify-items: center; gap: 2px; padding: 8px 6px; background: #fbe9d4; border: 2px solid rgba(58,37,48,.25); border-radius: 12px; text-align: center; }
+.fishcard .ico svg { width: 36px; height: 36px; }
+.fishcard small { color: rgba(58,37,48,.7); font-size: 11px; }
+.fishcard.unknown .ico { filter: brightness(0) opacity(.25); }
 .farmstats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .stat { background: #fff; border: 2px solid var(--ink); border-radius: 14px; padding: 10px 14px; }
 .stat small { display: block; color: var(--ink-soft); font-weight: 700; }
@@ -200,4 +208,5 @@ kbd { font: 600 13px var(--display); min-width: 140px; text-align: center; backg
   .form { width: 100%; }
   .buildgrid { grid-template-columns: repeat(2, 1fr); }
   .bag { grid-template-columns: repeat(6, 1fr); }
+  .fishlog { grid-template-columns: repeat(2, 1fr); }
 }

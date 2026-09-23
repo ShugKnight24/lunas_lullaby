@@ -11,8 +11,9 @@ import { FORAGE_RESPAWN_DAYS } from "./data/forage.js";
 import { LINES, GIFT_LINES, HEART_EVENTS } from "./data/dialogue.js";
 import { GR, inFarm } from "./world/map.js";
 import { addItem, takeFromSlot } from "./rules/inventory.js";
-import { stockHay, FEEDS, COOP_HAY_CAP } from "./rules/animals.js";
-import { plant, water, harvest, isRipe, clearDead, emptySoil } from "./rules/crops.js";
+import { stockHay, petHen, eggCount, henHearts, FEEDS, COOP_HAY_CAP } from "./rules/animals.js";
+import { sellPrice, qualityName } from "./rules/quality.js";
+import { plant, water, harvest, isRipe, clearDead, emptySoil, fertilize } from "./rules/crops.js";
 import { shipItem } from "./rules/shipping.js";
 import { dayIndex } from "./rules/clock.js";
 import { talk, gift, hearts, eventReady } from "./rules/relationships.js";
@@ -32,14 +33,14 @@ const tileIdx = (g, tx, ty) => ty * g.levels.world.w + tx;
 const cx = (tx) => tx * TILE + TILE / 2;
 const cy = (ty) => ty * TILE + TILE / 2;
 
-/** Add items to the bag with a toast; returns false if nothing fit. */
-export function give(g, id, n, x, y) {
-  const left = addItem(g.s.inv, id, n);
+/** Add items (at quality q) to the bag with a toast; returns false if nothing fit. */
+export function give(g, id, n, x, y, q = 0) {
+  const left = addItem(g.s.inv, id, n, q);
   if (left === n) {
     toast(g, "Your bag is full!");
     return false;
   }
-  toast(g, `+${n - left} ${ITEMS[id].name}`, id);
+  toast(g, `+${n - left} ${qualityName(ITEMS[id].name, q)}`, id);
   if (x !== undefined) burst(FXK.SPARK, x, y - 10, 5, 60, 0.6, "#fff6c8");
   return true;
 }
@@ -81,7 +82,8 @@ export function useTool(g) {
   const [tx, ty] = g.target;
   if (def.kind === "food") return eat(g);
   if (def.kind === "seed") return sow(g, slot, tx, ty);
-  if (def.kind !== "tool") return toast(g, def.kind === "crop" || def.kind === "forage" || def.kind === "fish" ? "Ship it in the bin or give it as a gift (E)." : `${def.name}: nothing to do with it here.`);
+  if (def.kind === "fertilizer") return feedSoil(g, slot, tx, ty);
+  if (def.kind !== "tool") return toast(g, def.kind === "crop" || def.kind === "forage" || def.kind === "fish" || def.kind === "animal" ? "Ship it in the bin or give it as a gift (E)." : `${def.name}: nothing to do with it here.`);
   if (slot.id === "rod") return startFishing(g);
   if (!spend(g, def.energy)) return;
   p.useT = p.useMax;
@@ -168,6 +170,18 @@ function sow(g, slot, tx, ty) {
   burst(FXK.DUST, cx(tx), cy(ty) + 6, 3, 25, 0.4, "rgba(170,120,80,0.7)");
 }
 
+function feedSoil(g, slot, tx, ty) {
+  if (g.lv.id !== "world") return;
+  const idx = tileIdx(g, tx, ty);
+  const r = fertilize(g.s.soil[idx], ITEMS[slot.id].tier);
+  if (r.error) return toast(g, r.error);
+  g.s.soil[idx] = r.tile;
+  takeFromSlot(g.s.inv, g.s.sel);
+  g.player.useT = 0.18;
+  g.player.useItem = null;
+  burst(FXK.DUST, cx(tx), cy(ty) + 6, 5, 30, 0.5, "rgba(120,90,160,0.7)");
+}
+
 function reap(g, idx, tx, ty) {
   const t = g.s.soil[idx];
   if (!t.crop) return false;
@@ -177,9 +191,9 @@ function reap(g, idx, tx, ty) {
     return true;
   }
   const def = CROPS[t.crop.id];
-  const h = harvest(t, def);
+  const h = harvest(t, def, Math.random());
   if (!h) return false;
-  if (!give(g, h.item, h.qty, cx(tx), cy(ty))) return true;
+  if (!give(g, h.item, h.qty, cx(tx), cy(ty), h.q)) return true;
   g.s.soil[idx] = h.tile;
   syncSoil(g, idx);
   const d = g.cropDraw.get(idx);
@@ -279,6 +293,8 @@ export function updateTarget(g, tile) {
   if (p.mounted) return;
   if (v) return show(pr, slot && isGiftable(slot.id) && g.s.rel[v.id].met ? "Give gift" : "Talk", v.x, v.y - 58);
   if (near(g.pet, fx, fy, 24)) return show(pr, "Pet", g.pet.x, g.pet.y - 30);
+  const hen = !coopWants(g, g.lv.at(tile[0], tile[1])) && chickenAt(g, fx, fy);
+  if (hen) return show(pr, `Pet ${henOf(g, hen).name}`, hen.x, hen.y - 30);
   if (horseNear(g)) return show(pr, g.s.horse.name ? "Ride" : "Name horse", g.horse.x, g.horse.y - 80);
   const tx = tile[0];
   const ty = tile[1];
@@ -290,7 +306,7 @@ export function updateTarget(g, tile) {
     if (o.kind === "furniture" && o.name === "bed") return show(pr, "Sleep", o.x, o.y - 70);
     if (o.kind === "structure" && o.type === "coop") {
       const st = coopState(g, o);
-      return show(pr, st.eggs ? "Collect eggs" : slot && FEEDS.includes(slot.id) ? "Add feed" : "Coop", o.x, o.y - 100);
+      return show(pr, eggCount(st) ? "Collect eggs" : slot && FEEDS.includes(slot.id) ? "Add feed" : "Coop", o.x, o.y - 100);
     }
   }
   if (g.lv.id === "world") {
@@ -309,6 +325,8 @@ export function interact(g) {
   const v = villagerAt(g, fx, fy);
   if (v) return chat(g, v);
   if (near(g.pet, fx, fy, 24)) return petPet(g);
+  const hen = !coopWants(g, g.lv.at(g.target[0], g.target[1])) && chickenAt(g, fx, fy);
+  if (hen) return petChicken(g, hen);
   if (horseNear(g)) return toggleMount(g);
   const [tx, ty] = g.target;
   const o = g.lv.at(tx, ty);
@@ -337,22 +355,49 @@ function ship(g) {
   const slot = selected(g);
   const def = slot && ITEMS[slot.id];
   if (!def || def.kind === "tool" || !def.sell) return toast(g, "Hold something to sell, then press E at the bin.");
-  g.s.bin = shipItem(g.s.bin, slot.id, slot.n);
-  toast(g, `Shipped ${slot.n} × ${def.name} (${slot.n * def.sell}g tonight)`, slot.id);
+  g.s.bin = shipItem(g.s.bin, slot.id, slot.n, slot.q);
+  toast(g, `Shipped ${slot.n} × ${qualityName(def.name, slot.q)} (${slot.n * sellPrice(def.sell, slot.q)}g tonight)`, slot.id);
   g.s.inv[g.s.sel] = null;
 }
 
 const coopState = (g, o) => g.s.structures.find((st) => st.uid === o.uid);
+const henOf = (g, c) => g.s.structures.find((st) => st.uid === c.coop).hens[c.hen];
+
+/** The coop has something for E to do (eggs, or feed in hand), so it wins over a hen in the way. */
+function coopWants(g, o) {
+  if (!o || o.gone || o.kind !== "structure" || o.type !== "coop") return false;
+  const slot = selected(g);
+  return eggCount(coopState(g, o)) > 0 || !!(slot && FEEDS.includes(slot.id));
+}
+
+function chickenAt(g, x, y) {
+  if (g.lv.id !== "world") return null;
+  for (const c of g.chickens) if (near(c, x, y, 20)) return c;
+  return null;
+}
+
+function petChicken(g, c) {
+  const st = g.s.structures.find((s) => s.uid === c.coop);
+  const r = petHen(st.hens[c.hen], today(g));
+  st.hens[c.hen] = r.hen;
+  const hearts = "♥".repeat(henHearts(r.hen)) || "♡";
+  if (!r.gained) return toast(g, `${r.hen.name} is content. ${hearts}`);
+  burst(FXK.HEART, c.x, c.y - 20, 3, 30, 1);
+  toast(g, `${r.hen.name} clucks happily! ${hearts}`, "egg");
+}
 
 /** E at the coop: collect eggs first, otherwise stock the feed in hand. */
 function tendCoop(g, o) {
   const st = coopState(g, o);
-  if (st.eggs) {
-    const left = addItem(g.s.inv, "egg", st.eggs);
-    if (left === st.eggs) return toast(g, "Your bag is full!");
-    toast(g, `+${st.eggs - left} Egg`, "egg");
-    burst(FXK.SPARK, o.x, o.y - 40, 6, 60, 0.6, "#fff6c8");
+  const total = eggCount(st);
+  if (total) {
+    const left = st.eggs.map((n, q) => (n ? addItem(g.s.inv, "egg", n, q) : 0));
+    const got = total - eggCount({ eggs: left });
+    if (!got) return toast(g, "Your bag is full!");
+    const fine = st.eggs[1] - left[1] + st.eggs[2] - left[2];
     st.eggs = left;
+    toast(g, `+${got} Egg${got > 1 ? "s" : ""}${fine ? ` (${fine} extra fine!)` : ""}`, "egg");
+    burst(FXK.SPARK, o.x, o.y - 40, 6, 60, 0.6, "#fff6c8");
     return;
   }
   const slot = selected(g);
@@ -422,7 +467,7 @@ function chat(g, v) {
   v.dir = Math.abs(p.x - v.x) > Math.abs(p.y - v.y) ? (p.x < v.x ? "left" : "right") : p.y < v.y ? "up" : "down";
   const vars = { name: g.s.profile.name, farm: g.s.profile.farm };
   if (slot && isGiftable(slot.id) && rel.met) {
-    const r = gift(rel, slot.id, v.def, d);
+    const r = gift(rel, slot.id, v.def, d, slot.q);
     if (r.refused) return g.ui.dialogue(v, [`You've already given ${v.def.name} a gift today.`]);
     g.s.rel[v.id] = r.rel;
     takeFromSlot(g.s.inv, g.s.sel);

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { createSave, migrateChain } from "../../src/engine/save.js";
 import { newState, migrateSave, SAVE_VERSION } from "../../src/game/state.js";
+import { newCoop } from "../../src/game/rules/animals.js";
 
 const V1 = JSON.parse(readFileSync(new URL("../fixtures/save-v1.json", import.meta.url), "utf8"));
 
@@ -56,12 +57,16 @@ describe("game save", () => {
     expect(s.gold).toBe(500);
   });
 
-  it("v1 coops gain an empty feed bin and nest", () => {
+  it("v1 coops gain feed, a nest and named hens", () => {
     const v1 = { ...structuredClone(V1), structures: [{ uid: 4, type: "coop", tx: 10, ty: 10 }, { uid: 5, type: "fence", tx: 1, ty: 1 }] };
     const s = migrateSave(v1);
-    expect(s.structures).toEqual([
-      { uid: 4, type: "coop", tx: 10, ty: 10, hay: 0, eggs: 0 },
-      { uid: 5, type: "fence", tx: 1, ty: 1 },
-    ]);
+    expect(s.structures[0]).toEqual({ uid: 4, type: "coop", tx: 10, ty: 10, ...newCoop(4) });
+    expect(s.structures[1]).toEqual({ uid: 5, type: "fence", tx: 1, ty: 1 });
+    expect(s.fishLog).toEqual({});
+  });
+
+  it("v2 coops keep their eggs as normal quality", () => {
+    const v2 = { ...structuredClone(V1), v: 2, structures: [{ uid: 4, type: "coop", tx: 10, ty: 10, hay: 7, eggs: 3 }] };
+    expect(migrateSave(v2).structures[0]).toMatchObject({ hay: 7, eggs: [3, 0, 0], hens: newCoop(4).hens });
   });
 });

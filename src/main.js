@@ -93,7 +93,7 @@ window.__game = {
     if (i >= 0) g.s.sel = i;
     return i;
   },
-  give: (id, n = 1) => addItem(g.s.inv, id, n),
+  give: (id, n = 1, q = 0) => addItem(g.s.inv, id, n, q),
   use: () => ((g.player.useT = 0), retarget(g), useTool(g)),
   interact: () => (retarget(g), interact(g)),
   mount: () => toggleMount(g),

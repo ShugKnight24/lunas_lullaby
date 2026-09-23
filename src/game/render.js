@@ -20,6 +20,8 @@ import { drawHud } from "./ui/hud.js";
 const OPT = { alpha: 1, flip: false, cap: 512 };
 const list = [];
 const byY = (a, b) => a.y - b.y;
+/** Fertilizer fleck positions within a soil tile (art units). */
+const FLECKS = [[7, 9], [20, 6], [13, 17], [24, 21], [6, 24]];
 const WEATHER = ["petals", null, "leaves", null];
 const ghostObj = { kind: "structure", type: "", mask: 0, key: "", spr: null };
 let VW = 0;
@@ -108,6 +110,12 @@ export function renderGame(ctx, view, g, t) {
       if (d.tx < tx0 || d.tx > tx1 || d.ty < ty0 || d.ty > ty1) continue;
       const wet = g.s.soil[d.idx].watered;
       blit(ctx, wet ? "soil:1" : "soil:0", soilSpr(wet), ox + d.tx * T, oy + d.ty * T, z, t);
+      const fert = g.s.soil[d.idx].fert;
+      if (fert) {
+        // Fertilizer flecks: violet for basic, gold for deluxe.
+        ctx.fillStyle = fert === 2 ? "rgba(246,198,60,0.85)" : "rgba(160,120,210,0.8)";
+        for (const [fx, fy] of FLECKS) ctx.fillRect(ox + (d.tx * TILE + fx) * z, oy + (d.ty * TILE + fy) * z, 2.5 * z, 2.5 * z);
+      }
     }
   }
   for (const o of lv.objects) {

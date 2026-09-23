@@ -5,6 +5,7 @@
  */
 
 import { createSave, migrateChain } from "../engine/save.js";
+import { newCoop } from "./rules/animals.js";
 import { INV_SIZE, MAX_ENERGY, CAN_CAPACITY, START_GOLD, TILE } from "./config.js";
 import { newClock } from "./rules/clock.js";
 import { newRel } from "./rules/relationships.js";
@@ -12,12 +13,18 @@ import { addItem } from "./rules/inventory.js";
 import { VILLAGER_IDS } from "./data/villagers.js";
 import { PLAYER_START, HORSE_START } from "./world/map.js";
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 /** `MIGRATIONS[n]` upgrades a v(n) save to v(n+1). */
 export const MIGRATIONS = {
   // v2: coops keep feed and uncollected eggs.
   1: (d) => ({ ...d, structures: d.structures.map((st) => (st.type === "coop" ? { hay: 0, eggs: 0, ...st } : st)) }),
+  // v3: fishing log; coops count eggs by quality and keep named hens.
+  2: (d) => ({
+    ...d,
+    fishLog: {},
+    structures: d.structures.map((st) => (st.type === "coop" ? { ...newCoop(st.uid), ...st, eggs: [st.eggs, 0, 0] } : st)),
+  }),
 };
 
 export const migrateSave = migrateChain(SAVE_VERSION, MIGRATIONS);
@@ -58,6 +65,7 @@ export function newState(profile = DEFAULT_PROFILE, seed = 7) {
     bin: [],
     flags: { found: {} },
     stats: { earned: 0, shippedDays: 0 },
+    fishLog: {},
     uid: 1,
   };
 }

@@ -73,9 +73,10 @@ export function endDay(s, o) {
     gold -= penalty;
   }
   let eggs = 0;
+  const today = dayIndex(s.clock);
   const structures = s.structures.map((st) => {
     if (st.type !== "coop") return st;
-    const r = coopMorning(st);
+    const r = coopMorning(st, today, (i) => hash(st.uid * 8 + i, today));
     eggs += r.laid;
     return r.st;
   });

@@ -8,6 +8,7 @@
 import { TILE } from "./config.js";
 import { STRUCTURES } from "./data/structures.js";
 import { canPlace, affordable, refund } from "./rules/structures.js";
+import { newCoop } from "./rules/animals.js";
 import { countItem, removeItem, addItem } from "./rules/inventory.js";
 import { GR, inFarm, FARM } from "./world/map.js";
 import { snapCamera, updateCamera } from "./world/camera.js";
@@ -141,7 +142,7 @@ export function placeStructure(g, type, tx, ty) {
     if (o && o.kind === "flowers") (o.gone = true), lv.index(o, null);
   }
   const st = { uid: g.s.uid++, type, tx, ty };
-  if (type === "coop") Object.assign(st, { hay: 0, eggs: 0 });
+  if (type === "coop") Object.assign(st, newCoop(st.uid));
   g.s.structures.push(st);
   const o = addStructureObject(g, st);
   fenceMasks(g);
@@ -160,7 +161,7 @@ export function removeStructure(g, o, refundIt) {
   if (refundIt) {
     const r = refund(STRUCTURES[st.type].cost);
     for (const k in r) if (r[k]) addItem(g.s.inv, k, r[k]);
-    if (st.eggs) addItem(g.s.inv, "egg", st.eggs);
+    if (st.eggs) st.eggs.forEach((n, q) => n && addItem(g.s.inv, "egg", n, q));
   }
   fenceMasks(g);
   return st;

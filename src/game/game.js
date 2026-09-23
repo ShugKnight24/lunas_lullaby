@@ -117,8 +117,8 @@ export function addStructureObject(g, st) {
   if (st.type === "coop") {
     o.style = "coop";
     o.y = (st.ty + def.h) * TILE - 2;
-    for (let i = 0; i < 2; i++) g.chickens.push(createChicken(o.x + (i ? 20 : -20), o.y + 20));
-    o.chickens = g.chickens.slice(-2);
+    o.chickens = st.hens.map((_, i) => Object.assign(createChicken(o.x + (i ? 20 : -20), o.y + 20), { coop: st.uid, hen: i }));
+    g.chickens.push(...o.chickens);
   }
   if (st.type === "well") o.y = (st.ty + 2) * TILE - 4;
   lv.add(o);

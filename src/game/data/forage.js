@@ -13,4 +13,3 @@ export const RARE_FORAGE = [
   ["star_shard", "snow_yam"],
 ];
 export const FORAGE_RESPAWN_DAYS = 3;
-export const FISH = ["sunfish", "sunfish", "carp", "carp", "trout"];

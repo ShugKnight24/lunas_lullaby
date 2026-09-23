@@ -8,6 +8,7 @@
 import { HOTBAR, MAX_ENERGY, CAN_CAPACITY } from "../config.js";
 import { ITEMS } from "../data/items.js";
 import { timeLabel, weekday, seasonName } from "../rules/clock.js";
+import { QUALITY, qualityName } from "../rules/quality.js";
 import { drawSvgSprite } from "../../engine/sprite.js";
 import { DEFS, iconSpr, iconKey } from "../art/index.js";
 
@@ -112,6 +113,23 @@ function outlined(ctx, s, x, y, font, color = "#fff", align = "right") {
 function icon(ctx, id, x, y, ppu, t) {
   OPT.alpha = 1;
   drawSvgSprite(ctx, iconKey(id), iconSpr(id), DEFS, Math.round(x), Math.round(y), ppu, t, OPT);
+}
+
+/** Silver/gold star in a slot's corner. */
+function qualityStar(ctx, q, x, y) {
+  if (!q) return;
+  ctx.fillStyle = QUALITY[q].color;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 ? 2.6 : 6;
+    const a = (i * Math.PI) / 5 - Math.PI / 2;
+    ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
 }
 
 // Cached HUD strings.
@@ -287,6 +305,7 @@ function drawHotbar(ctx, view, g, t, k) {
     const s = inv[i];
     if (s) {
       icon(ctx, s.id, x + S / 2, y + S / 2, 1.25, t);
+      qualityStar(ctx, s.q, x + 9, y + S - 9);
       if (s.n > 1) outlined(ctx, NUMS[Math.min(999, s.n)], x + S - 5, y + S - 5, F.count);
       if (s.id === "can") {
         const f = g.s.water / CAN_CAPACITY;
@@ -301,7 +320,7 @@ function drawHotbar(ctx, view, g, t, k) {
   // Selected item name, briefly after changing slots.
   const s = inv[g.s.sel];
   if (s && g.hudFlash > 0) {
-    const name = ITEMS[s.id].name;
+    const name = qualityName(ITEMS[s.id].name, s.q);
     ctx.globalAlpha = Math.min(1, g.hudFlash * 2);
     ctx.font = F.mid;
     const tw = ctx.measureText(name).width + 28;
@@ -364,6 +383,12 @@ function drawFishingBar(ctx, g, ox, oy, z, k) {
   ctx.fillRect(bx + 8, by + 8, w - 16, 10);
   ctx.fillStyle = "#8fd06a";
   ctx.fillRect(bx + 8 + (w - 16) * f.zone, by + 8, (w - 16) * f.zoneW, 10);
+  // Silver (middle half) and gold (middle fifth) bands, as in rules/fishing.catchQuality.
+  const mid = f.zone + f.zoneW / 2;
+  for (const [k, q] of [[0.5, 1], [0.2, 2]]) {
+    ctx.fillStyle = QUALITY[q].color;
+    ctx.fillRect(bx + 8 + (w - 16) * (mid - (f.zoneW / 2) * k), by + 10, (w - 16) * f.zoneW * k, 6);
+  }
   ctx.fillStyle = "#e8566a";
   ctx.strokeStyle = INK;
   ctx.lineWidth = 2;

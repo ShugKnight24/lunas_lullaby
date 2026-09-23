@@ -5,6 +5,7 @@
 
 import { part, oval, circle, hi, fill, line, ellD, rrD, capD, polyD, outlined, sprite, toSvg, dark, INK } from "./cozy-kit.js";
 import { CROPS } from "../data/crops.js";
+import { FISH } from "../data/fish.js";
 import { leafD } from "./crops-art.js";
 
 const BOX = [-17, -17, 34, 34];
@@ -45,9 +46,7 @@ const DRAW = {
   snow_yam: () => part("M-11 4C-12 -4 -2 -9 6 -6C12 -4 12 4 7 7C1 10 -9 10 -11 4Z", "#c8a8d8", { s: 1.8 }) + fill(ellD(-3, -4, 4, 1.8), "#fff", 0.8) + hi(-6, 1, 1.5, 1, 0.5),
   star_shard: () => part(polyD([[0, -13], [3.5, -4], [13, -3], [5.5, 3], [8, 12], [0, 7], [-8, 12], [-5.5, 3], [-13, -3], [-3.5, -4]]), "#bfe0ff", { s: 1.8 }) + hi(-2, -3, 2.5, 1.5, 0.9),
 
-  sunfish: () => fish("#f6c85a", "#f08a4a"),
-  carp: () => fish("#a8b48a", "#7a8a5a"),
-  trout: () => fish("#9ac8e0", "#f08aa0"),
+  ...Object.fromEntries(Object.entries(FISH).map(([id, f]) => [id, () => fish(f.color, f.fin)])),
 
   bread: () => part("M-12 6C-13 -4 -6 -9 0 -9C6 -9 13 -4 12 6Z", "#e0a060", { s: 2 }) + line("M-6 -5L-3 -1M0 -7L3 -2M5 -5L8 -1", 1.2, dark("#e0a060", 0.35)) + hi(-5, -4, 2.5, 1.2, 0.55),
   lullaby_loaf: () => part("M-12 6C-13 -4 -6 -9 0 -9C6 -9 13 -4 12 6Z", "#c8a0d8", { s: 2 }) + part(polyD([[0, -6], [1.6, -2], [5.5, -1.6], [2.6, 1], [3.4, 5], [0, 3], [-3.4, 5], [-2.6, 1], [-5.5, -1.6], [-1.6, -2]]), "#fff2a8", { s: 0.6, w: 1 }),

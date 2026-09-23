@@ -9,13 +9,16 @@ import { ITEMS } from "../data/items.js";
 import { CROPS, SHOP_SEEDS } from "../data/crops.js";
 import { STRUCTURES, BUILD_ORDER } from "../data/structures.js";
 import { VILLAGERS, VILLAGER_IDS } from "../data/villagers.js";
+import { FISH, FISH_IDS } from "../data/fish.js";
 import { HIDDEN } from "../world/map.js";
 import { totalDays } from "../rules/crops.js";
 import { hearts } from "../rules/relationships.js";
 import { addItem, countItem } from "../rules/inventory.js";
 import { seasonName, weekday } from "../rules/clock.js";
 import { affordable } from "../rules/structures.js";
+import { henHearts } from "../rules/animals.js";
 import { iconSvg } from "../art/icons.js";
+import { qualityName } from "../rules/quality.js";
 import { portraitSvg } from "../art/person.js";
 import { toSvg } from "../art/cozy-kit.js";
 import { resolveObject } from "../art/index.js";
@@ -37,6 +40,15 @@ export function h(sel, attrs = {}, ...kids) {
   for (const c of kids.flat()) if (c != null && c !== false) el.append(c.nodeType ? c : document.createTextNode(String(c)));
   return el;
 }
+
+/** Vague "where to look" line for a fish not caught yet. */
+const hint = (f) => {
+  const where = { river: "river", pond: "pond", pool: "a hidden pool" }[f.where[0]];
+  const when = f.hours[0] >= 1080 ? " at night" : "";
+  const wx = f.weather === "rain" ? " in the rain" : "";
+  const season = f.seasons.length ? ` in ${f.seasons.join(" or ")}` : "";
+  return `Try the ${where}${season}${when}${wx}`.replace("the a ", "a ");
+};
 
 const heartRow = (n) => h("div.hearts", {}, Array.from({ length: 10 }, (_, i) => h(`span.heart${i < n ? ".on" : ""}`, { html: "&#9829;" })));
 
@@ -141,7 +153,7 @@ export function createUI(root) {
   // ── Shop ──
   ui.shop = () => {
     const g = ui.g;
-    const stock = [...SHOP_SEEDS[g.s.clock.season], "hay", "bread"];
+    const stock = [...SHOP_SEEDS[g.s.clock.season], "fertilizer", "deluxe_fertilizer", "hay", "bread"];
     const gold = h("div.gold");
     const list = h("div.shoplist");
     const render = () => {
@@ -241,7 +253,7 @@ export function createUI(root) {
     let pick = -1;
     const show = (t) => {
       tab = t;
-      tabs.replaceChildren(...[["friends", "Friends"], ["items", "Bag"], ["farm", "Farm"]].map(([id, label]) => h(`button.tab${id === t ? ".on" : ""}`, { onclick: () => show(id) }, label)));
+      tabs.replaceChildren(...[["friends", "Friends"], ["items", "Bag"], ["fish", "Fish"], ["farm", "Farm"]].map(([id, label]) => h(`button.tab${id === t ? ".on" : ""}`, { onclick: () => show(id) }, label)));
       if (t === "friends") {
         body.replaceChildren(
           ...VILLAGER_IDS.map((id) => {
@@ -265,7 +277,7 @@ export function createUI(root) {
               h(
                 `div.slot${i < 9 ? ".hot" : ""}${i === g.s.sel ? ".sel" : ""}${i === pick ? ".pick" : ""}`,
                 {
-                  title: s ? ITEMS[s.id].name : "",
+                  title: s ? qualityName(ITEMS[s.id].name, s.q) : "",
                   onclick: () => {
                     if (pick < 0) pick = i;
                     else {
@@ -278,12 +290,34 @@ export function createUI(root) {
                   },
                 },
                 s ? h("div.ico", { html: iconSvg(s.id) }) : null,
+                s?.q ? h(`span.q.q${s.q}`, {}, "★") : null,
                 s && s.n > 1 ? h("span.n", {}, s.n) : null,
               ),
             ),
           );
         draw();
         body.replaceChildren(grid, h("p.note", {}, "Click two slots to swap them. The top row is your hotbar (keys 1–9)."));
+      } else if (t === "fish") {
+        const log = g.s.fishLog;
+        const caught = FISH_IDS.filter((id) => log[id]).length;
+        body.replaceChildren(
+          h("p.note", {}, `${caught} / ${FISH_IDS.length} kinds caught. Different fish bite by water, season, time of day and weather.`),
+          h(
+            "div.fishlog",
+            {},
+            FISH_IDS.map((id) => {
+              const e = log[id];
+              const f = FISH[id];
+              return h(
+                `div.fishcard${e ? "" : ".unknown"}`,
+                { title: e ? f.name : "Not caught yet" },
+                h("div.ico", { html: iconSvg(id) }),
+                h("b", {}, e ? f.name : "???"),
+                h("small", {}, e ? `×${e.n}${e.best ? ` · best ${["", "silver", "gold"][e.best]}` : ""}` : hint(f)),
+              );
+            }),
+          ),
+        );
       } else {
         const found = HIDDEN.filter((x) => g.s.flags.found[x.id]).length;
         const c = g.s.clock;
@@ -297,6 +331,7 @@ export function createUI(root) {
             h("div.stat", {}, h("small", {}, g.s.profile.pet.name), h("b", {}, `Happiness ${g.s.pet.happy}%`)),
             h("div.stat", {}, h("small", {}, "Horse"), h("b", {}, g.s.horse.name || "Not named yet")),
             h("div.stat", {}, h("small", {}, "Secret places"), h("b", {}, `${found} / ${HIDDEN.length} found`)),
+            ...g.s.structures.filter((st) => st.type === "coop").flatMap((st) => st.hens.map((hen) => h("div.stat", {}, h("small", {}, `Hen · ${hen.name}`), h("b", {}, "♥".repeat(henHearts(hen)) + "♡".repeat(5 - henHearts(hen)))))),
             h("div.stat", {}, h("small", {}, "Crops growing"), h("b", {}, Object.values(g.s.soil).filter((t) => t.crop && !t.crop.dead).length)),
             h("div.stat", {}, h("small", {}, "Wood · Stone"), h("b", {}, `${countItem(g.s.inv, "wood")} · ${countItem(g.s.inv, "stone")}`)),
           ),
@@ -335,7 +370,7 @@ export function createUI(root) {
   ui.summary = (report, s, onContinue) => {
     const c = s.clock;
     const lines = report.lines.length
-      ? report.lines.map((l) => h("div.line", {}, h("span.mini", { html: iconSvg(l.id) }), h("span", {}, `${ITEMS[l.id].name} × ${l.n}`), h("b", {}, `${l.sum}g`)))
+      ? report.lines.map((l) => h("div.line", {}, h("span.mini", { html: iconSvg(l.id) }), h("span", {}, `${qualityName(ITEMS[l.id].name, l.q)} × ${l.n}`), h("b", {}, `${l.sum}g`)))
       : [h("p.note", {}, "Nothing shipped today.")];
     const wx = { sun: "Sunny", rain: "Rainy — crops water themselves", snow: "Snowy" }[s.weather];
     const box = h(

@@ -1,7 +1,10 @@
 /**
  * Item table. `kind` drives what using/placing/gifting an item does;
- * `sell` is the shipping-bin price, `price` the shop price.
+ * `sell` is the shipping-bin price, `price` the shop price. Fish come from
+ * data/fish.js.
  */
+
+import { FISH } from "./fish.js";
 
 export const ITEMS = {
   hoe: { name: "Hoe", kind: "tool", energy: 2, tip: "Till soil" },
@@ -34,11 +37,11 @@ export const ITEMS = {
   snow_yam: { name: "Snow Yam", kind: "forage", sell: 100 },
   star_shard: { name: "Star Shard", kind: "forage", sell: 400 },
 
-  sunfish: { name: "Sunfish", kind: "fish", sell: 30 },
-  carp: { name: "Pond Carp", kind: "fish", sell: 45 },
-  trout: { name: "Rainbow Trout", kind: "fish", sell: 90 },
+  ...Object.fromEntries(Object.entries(FISH).map(([id, f]) => [id, { name: f.name, kind: "fish", sell: f.sell }])),
 
   egg: { name: "Egg", kind: "animal", sell: 50 },
+  fertilizer: { name: "Basic Fertilizer", kind: "fertilizer", tier: 1, price: 30, tip: "Better crop quality · use on tilled soil" },
+  deluxe_fertilizer: { name: "Deluxe Fertilizer", kind: "fertilizer", tier: 2, price: 90, tip: "Much better crop quality · use on tilled soil" },
   hay: { name: "Hay", kind: "feed", price: 20, tip: "Chicken feed · stock it at the coop" },
 
   wood: { name: "Wood", kind: "resource", sell: 2 },

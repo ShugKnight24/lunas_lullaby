@@ -1,6 +1,7 @@
 /**
  * Friendship: 0..1000 points, 100 per heart. Talking once a day and one gift
- * a day raise it; gifts follow the villager's loved/liked/disliked lists.
+ * a day raise it; gifts follow the villager's loved/liked/disliked lists,
+ * and silver/gold quality makes a welcome gift count for more.
  * A relationship is `{ pts, talked, gifted, events }` where talked/gifted
  * hold the day index of the last chat/gift.
  */
@@ -9,6 +10,8 @@ export const MAX_PTS = 1000;
 export const PTS_PER_HEART = 100;
 export const TALK_PTS = 25;
 export const GIFT_PTS = { love: 80, like: 45, neutral: 20, dislike: -30 };
+/** Multiplier on positive gift points by quality. */
+export const GIFT_QUALITY = [1, 1.1, 1.25];
 
 export const newRel = () => ({ pts: 0, talked: -1, gifted: -1, events: {} });
 export const hearts = (rel) => Math.floor(rel.pts / PTS_PER_HEART);
@@ -28,10 +31,11 @@ export function giftTaste(id, v) {
 }
 
 /** One gift per day: `{ rel, taste, delta }` or `{ rel, refused: true }`. */
-export function gift(rel, id, v, day) {
+export function gift(rel, id, v, day, q = 0) {
   if (rel.gifted === day) return { rel, refused: true };
   const taste = giftTaste(id, v);
-  const delta = GIFT_PTS[taste];
+  const base = GIFT_PTS[taste];
+  const delta = base > 0 ? Math.round(base * GIFT_QUALITY[q]) : base;
   return { rel: { ...rel, gifted: day, pts: clampPts(rel.pts + delta) }, taste, delta };
 }
 

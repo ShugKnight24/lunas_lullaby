@@ -14,6 +14,12 @@ export const GR = { GRASS: 0, PATH: 1, PLAZA: 2, WATER: 3, SAND: 4, FIELD: 5, WO
 export const FARM = { x0: 2, y0: 2, x1: 33, y1: 62 };
 export const inFarm = (x, y) => x >= FARM.x0 && x <= FARM.x1 && y >= FARM.y0 && y <= FARM.y1;
 
+/** Which body of water a water tile belongs to (for the fish table). */
+export function waterKind(x, y) {
+  if (x < 20) return "pool";
+  return ((x - 87) / 6.5) ** 2 + ((y - 48) / 5.2) ** 2 < 1 ? "pond" : "river";
+}
+
 /** Building placements: top-left tile, style; door = bottom-centre tile. */
 export const BUILDING_SPOTS = [
   { id: "house", style: "house", tx: 5, ty: 5, interior: "house" },
