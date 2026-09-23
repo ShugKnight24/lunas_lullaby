@@ -14,6 +14,10 @@ npm run build    # production bundle in dist/
 
 If Playwright's bundled browser isn't installed, point `CHROME_PATH` at a local Chrome for `test:e2e` and `shot`. Headless screenshot of the running dev server: `node scripts/shot.mjs http://localhost:3200/ shots/x.png 2000`.
 
+## CI and deploy
+
+GitHub Actions runs the unit tests, the build and the Playwright specs on every pull request (`.github/workflows/ci.yml`). Pushing to `main` builds the game and publishes `dist/` to GitHub Pages (`.github/workflows/deploy.yml`).
+
 ## Controls
 
 | Key | Action |
