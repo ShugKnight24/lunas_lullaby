@@ -11,8 +11,13 @@ import { SeededRNG } from "../../engine/seeded-rng.js";
 export const GR = { GRASS: 0, PATH: 1, PLAZA: 2, WATER: 3, SAND: 4, FIELD: 5, WOOD: 6, FOREST: 7 };
 
 /** Farm area where tilling and building are allowed. */
-export const FARM = { x0: 2, y0: 2, x1: 33, y1: 62 };
-export const inFarm = (x, y) => x >= FARM.x0 && x <= FARM.x1 && y >= FARM.y0 && y <= FARM.y1;
+/** The farm: everything west of the east fence, down to the southern tree line. */
+export const FARM = { x0: 2, y0: 2, x1: 33, y1: 69 };
+/** The farm's first bounds; map generation still uses them so generated ids stay stable. */
+const GEN_FARM = { x0: 2, y0: 2, x1: 33, y1: 62 };
+const inRect = (r, x, y) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1;
+/** On the farm and not inside a hidden place (or its hedge ring). */
+export const inFarm = (x, y) => inRect(FARM, x, y) && !HIDDEN.some((h) => x >= h.x0 - 1 && x <= h.x1 + 1 && y >= h.y0 - 1 && y <= h.y1 + 1);
 
 /** Which body of water a water tile belongs to (for the fish table). */
 export function waterKind(x, y) {
@@ -248,7 +253,7 @@ export function buildWorld(seed = 7) {
   // Forage spots (on free ground).
   let sid = 0;
   const spot = (x, y, rare = false) => {
-    if (!ok(x, y) || solid[idx(x, y)] || (!rare && inFarm(x, y))) return;
+    if (!ok(x, y) || solid[idx(x, y)] || (!rare && inRect(GEN_FARM, x, y))) return;
     if (ground[idx(x, y)] === GR.WATER) return;
     for (const o of objects) if (o.tx === x && o.ty === y && o.kind !== "flowers") return;
     spots.push({ id: ++sid, tx: x, ty: y, rare });
@@ -263,6 +268,7 @@ export function buildWorld(seed = 7) {
   spot(11, 66, true);
 
   addFarmWell(ground, objects, spots, idx);
+  addSouthFence(objects);
   return { w: W, h: H, ground, solid, objects, spots };
 }
 
@@ -279,6 +285,11 @@ function addFarmWell(ground, objects, spots, idx) {
   for (const o of objects) if (onPave(o.tx, o.ty)) o.skip = true;
   for (let i = spots.length - 1; i >= 0; i--) if (onPave(spots[i].tx, spots[i].ty)) spots.splice(i, 1); // spot ids are explicit
   objects.push({ kind: "well", tx, ty, farm: true });
+}
+
+/** The east fence once stopped at row 62; the farm now runs to the tree line (appended, like the well). */
+function addSouthFence(objects) {
+  for (let y = GEN_FARM.y1 + 1; y <= FARM.y1; y++) objects.push({ kind: "fence", tx: 34, ty: y, fixed: true });
 }
 
 /** Interior layouts: size, wall/floor colours, furniture and the exit. */

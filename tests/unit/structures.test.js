@@ -39,3 +39,15 @@ describe("sprinklers", () => {
     expect([...wet].sort((a, b) => a - b)).toEqual([34, 43, 45, 54]);
   });
 });
+
+describe("farm bounds", () => {
+  it("run from the house to the southern tree line, west of the fence, around the hidden pool", async () => {
+    const { inFarm, buildWorld } = await import("../../src/game/world/map.js");
+    expect(inFarm(20, 20)).toBe(true);
+    expect(inFarm(20, 66)).toBe(true); // the south strip
+    expect(inFarm(34, 40)).toBe(false); // the east fence line
+    expect(inFarm(8, 66)).toBe(false); // the Moonlit Pool stays secret
+    const fence = buildWorld(7).objects.filter((o) => o.kind === "fence" && o.tx === 34 && o.fixed).map((o) => o.ty);
+    for (let y = 36; y <= 69; y++) expect(fence, `fence at row ${y}`).toContain(y);
+  });
+});

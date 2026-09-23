@@ -38,7 +38,7 @@ export function placementQuery(g) {
       const pty = Math.floor(g.player.y / TILE);
       if (!inFarm(x, y)) return false;
       const gr = lv.ground[y * lv.w + x];
-      if (gr !== GR.GRASS && gr !== GR.FIELD && gr !== GR.SAND) return false;
+      if (gr !== GR.GRASS && gr !== GR.FIELD && gr !== GR.SAND && gr !== GR.FOREST) return false;
       if (lv.doors.has(y * lv.w + x)) return false;
       const plv = g.mode === "build" ? g.build.prevLevel : g.lv;
       return !(plv === lv && x === ptx && y === pty);
