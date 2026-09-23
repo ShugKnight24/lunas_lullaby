@@ -47,7 +47,13 @@ test("the minimap shows by default, N hides it, and the choice sticks", async ({
     window.__game.newGame(undefined, { intro: false });
   });
   // Sample a pixel inside the map area (bottom-left) with the map on, then off.
-  const px = () => page.evaluate(() => Array.from(document.getElementById("game").getContext("2d").getImageData(60, 620, 1, 1).data).slice(0, 3).join(","));
+  // The canvas renders at a device-tier budget, so map CSS px to backing px.
+  const px = () =>
+    page.evaluate(() => {
+      const c = document.getElementById("game");
+      const k = c.width / c.clientWidth;
+      return Array.from(c.getContext("2d").getImageData(Math.round(60 * k), Math.round(620 * k), 1, 1).data).slice(0, 3).join(",");
+    });
   await page.waitForTimeout(500);
   const on = await px();
   await page.keyboard.press("KeyN");
