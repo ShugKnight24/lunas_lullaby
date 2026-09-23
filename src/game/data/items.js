@@ -38,6 +38,9 @@ export const ITEMS = {
   carp: { name: "Pond Carp", kind: "fish", sell: 45 },
   trout: { name: "Rainbow Trout", kind: "fish", sell: 90 },
 
+  egg: { name: "Egg", kind: "animal", sell: 50 },
+  hay: { name: "Hay", kind: "feed", price: 20, tip: "Chicken feed · stock it at the coop" },
+
   wood: { name: "Wood", kind: "resource", sell: 2 },
   stone: { name: "Stone", kind: "resource", sell: 2 },
   fiber: { name: "Fiber", kind: "resource", sell: 1 },
@@ -49,5 +52,5 @@ export const ITEMS = {
 export const TOOL_IDS = ["hoe", "can", "axe", "scythe"];
 export const isGiftable = (id) => {
   const k = ITEMS[id]?.kind;
-  return k === "crop" || k === "forage" || k === "fish" || k === "food";
+  return k === "crop" || k === "forage" || k === "fish" || k === "food" || k === "animal";
 };

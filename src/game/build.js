@@ -141,6 +141,7 @@ export function placeStructure(g, type, tx, ty) {
     if (o && o.kind === "flowers") (o.gone = true), lv.index(o, null);
   }
   const st = { uid: g.s.uid++, type, tx, ty };
+  if (type === "coop") Object.assign(st, { hay: 0, eggs: 0 });
   g.s.structures.push(st);
   const o = addStructureObject(g, st);
   fenceMasks(g);
@@ -159,6 +160,7 @@ export function removeStructure(g, o, refundIt) {
   if (refundIt) {
     const r = refund(STRUCTURES[st.type].cost);
     for (const k in r) if (r[k]) addItem(g.s.inv, k, r[k]);
+    if (st.eggs) addItem(g.s.inv, "egg", st.eggs);
   }
   fenceMasks(g);
   return st;

@@ -87,6 +87,12 @@ window.__game = {
   },
   face: (dir) => (g.player.dir = dir),
   select: (i) => (g.s.sel = i),
+  /** Select the first bag slot holding `id`; returns the slot, or -1 (selection unchanged). */
+  selectItem(id) {
+    const i = g.s.inv.findIndex((x) => x?.id === id);
+    if (i >= 0) g.s.sel = i;
+    return i;
+  },
   give: (id, n = 1) => addItem(g.s.inv, id, n),
   use: () => ((g.player.useT = 0), retarget(g), useTool(g)),
   interact: () => (retarget(g), interact(g)),

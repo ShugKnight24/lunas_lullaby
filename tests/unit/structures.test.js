@@ -35,7 +35,7 @@ describe("structure placement", () => {
 describe("sprinklers", () => {
   it("cover the four orthogonal neighbours", () => {
     expect(sprinklerTiles(4, 4)).toEqual([[4, 3], [5, 4], [4, 5], [3, 4]]);
-    const wet = sprinklerCoverage([{ kind: "sprinkler", tx: 4, ty: 4 }, { kind: "fence", tx: 0, ty: 0 }], 10);
+    const wet = sprinklerCoverage([{ uid: 1, type: "sprinkler", tx: 4, ty: 4 }, { uid: 2, type: "fence", tx: 0, ty: 0 }], 10);
     expect([...wet].sort((a, b) => a - b)).toEqual([34, 43, 45, 54]);
   });
 });

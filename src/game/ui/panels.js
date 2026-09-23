@@ -141,7 +141,7 @@ export function createUI(root) {
   // ── Shop ──
   ui.shop = () => {
     const g = ui.g;
-    const stock = [...SHOP_SEEDS[g.s.clock.season], "bread"];
+    const stock = [...SHOP_SEEDS[g.s.clock.season], "hay", "bread"];
     const gold = h("div.gold");
     const list = h("div.shoplist");
     const render = () => {
@@ -161,7 +161,7 @@ export function createUI(root) {
             "div.shopitem",
             {},
             h("div.ico", { html: iconSvg(id) }),
-            h("div.info", {}, h("b", {}, it.name), h("small", {}, crop ? `${totalDays(crop)} days · ${crop.seasons.join(" & ")}${crop.regrow ? ` · regrows every ${crop.regrow}` : ""} · sells ${ITEMS[crop.produce].sell}g` : `Restores ${it.energy} energy`)),
+            h("div.info", {}, h("b", {}, it.name), h("small", {}, crop ? `${totalDays(crop)} days · ${crop.seasons.join(" & ")}${crop.regrow ? ` · regrows every ${crop.regrow}` : ""} · sells ${ITEMS[crop.produce].sell}g` : it.energy ? `Restores ${it.energy} energy` : it.tip)),
             h("span.price", {}, `${it.price}g`),
             h("button.btn", { onclick: () => buy(1), disabled: g.s.gold < it.price }, "Buy"),
             h("button.btn", { onclick: () => buy(5), disabled: g.s.gold < it.price * 5 }, "×5"),
@@ -345,6 +345,7 @@ export function createUI(root) {
       report.passedOut ? h("p.note", {}, `Someone carried you home. The clinic fee was ${report.penalty}g.`) : null,
       h("div.shipped", {}, lines),
       h("div.total", {}, h("span", {}, "Earned"), h("b", {}, `+${report.total}g`)),
+      report.eggs ? h("p.note", {}, `Your hens laid ${report.eggs} egg${report.eggs > 1 ? "s" : ""}.`) : null,
       report.seasonChanged ? h("p.season", {}, `${seasonName(c.season)} has arrived!${report.withered ? ` ${report.withered} out-of-season crop${report.withered > 1 ? "s" : ""} withered.` : ""}`) : null,
       h("p.note", {}, `${weekday(c)} ${c.day}, ${seasonName(c.season)} · ${wx}`),
       h("div.row", {}, h("button.btn.primary", { onclick: () => (close(), onContinue()) }, "Good morning!")),

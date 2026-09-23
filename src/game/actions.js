@@ -1,7 +1,7 @@
 /**
  * What the player's hands do: tool use toward the facing tile, the E
  * interaction (talk, gift, pet, ride, ship, harvest, forage, bed, shop,
- * build board) and the prompt preview that tells them which one E will do.
+ * build board, coop) and the prompt preview that tells them which one E will do.
  */
 
 import { TILE, CAN_CAPACITY, MAX_ENERGY } from "./config.js";
@@ -11,6 +11,7 @@ import { FORAGE_RESPAWN_DAYS } from "./data/forage.js";
 import { LINES, GIFT_LINES, HEART_EVENTS } from "./data/dialogue.js";
 import { GR, inFarm } from "./world/map.js";
 import { addItem, takeFromSlot } from "./rules/inventory.js";
+import { stockHay, FEEDS, COOP_HAY_CAP } from "./rules/animals.js";
 import { plant, water, harvest, isRipe, clearDead, emptySoil } from "./rules/crops.js";
 import { shipItem } from "./rules/shipping.js";
 import { dayIndex } from "./rules/clock.js";
@@ -287,6 +288,10 @@ export function updateTarget(g, tile) {
     if (o.kind === "board" || (o.kind === "furniture" && o.build)) return show(pr, "Build", o.x, o.y - 56);
     if (o.kind === "furniture" && o.shop) return show(pr, "Shop", o.x, o.y - 56);
     if (o.kind === "furniture" && o.name === "bed") return show(pr, "Sleep", o.x, o.y - 70);
+    if (o.kind === "structure" && o.type === "coop") {
+      const st = coopState(g, o);
+      return show(pr, st.eggs ? "Collect eggs" : slot && FEEDS.includes(slot.id) ? "Add feed" : "Coop", o.x, o.y - 100);
+    }
   }
   if (g.lv.id === "world") {
     const idx = tileIdx(g, tx, ty);
@@ -312,6 +317,7 @@ export function interact(g) {
     if (o.kind === "board" || (o.kind === "furniture" && o.build)) return g.ui.buildMenu();
     if (o.kind === "furniture" && o.shop) return g.ui.shop();
     if (o.kind === "furniture" && o.name === "bed") return g.ui.confirm("Go to bed and end the day?", "Sleep", "Not yet", () => sleep(g));
+    if (o.kind === "structure" && o.type === "coop") return tendCoop(g, o);
   }
   if (g.lv.id === "world") {
     const idx = tileIdx(g, tx, ty);
@@ -334,6 +340,28 @@ function ship(g) {
   g.s.bin = shipItem(g.s.bin, slot.id, slot.n);
   toast(g, `Shipped ${slot.n} × ${def.name} (${slot.n * def.sell}g tonight)`, slot.id);
   g.s.inv[g.s.sel] = null;
+}
+
+const coopState = (g, o) => g.s.structures.find((st) => st.uid === o.uid);
+
+/** E at the coop: collect eggs first, otherwise stock the feed in hand. */
+function tendCoop(g, o) {
+  const st = coopState(g, o);
+  if (st.eggs) {
+    const left = addItem(g.s.inv, "egg", st.eggs);
+    if (left === st.eggs) return toast(g, "Your bag is full!");
+    toast(g, `+${st.eggs - left} Egg`, "egg");
+    burst(FXK.SPARK, o.x, o.y - 40, 6, 60, 0.6, "#fff6c8");
+    st.eggs = left;
+    return;
+  }
+  const slot = selected(g);
+  if (!slot || !FEEDS.includes(slot.id)) return toast(g, `Feed: ${st.hay}/${COOP_HAY_CAP} hay. Hold hay or fiber and press E to stock it.`);
+  const r = stockHay(st, slot.n);
+  if (!r.used) return toast(g, "The feed bin is full.");
+  takeFromSlot(g.s.inv, g.s.sel, r.used);
+  st.hay = r.st.hay;
+  toast(g, `Stocked ${r.used} ${ITEMS[slot.id].name} · ${st.hay}/${COOP_HAY_CAP} hay`, slot.id);
 }
 
 function petPet(g) {

@@ -1,9 +1,10 @@
 /**
  * Save state: plain JSON data only (the runtime rebuilds levels, actors and
- * sprites from it). `createSave("luna_save", 1)` stores it.
+ * sprites from it). `createSave("luna_save", SAVE_VERSION)` stores it; bump
+ * SAVE_VERSION and add a step to MIGRATIONS whenever the shape changes.
  */
 
-import { createSave } from "../engine/save.js";
+import { createSave, migrateChain } from "../engine/save.js";
 import { INV_SIZE, MAX_ENERGY, CAN_CAPACITY, START_GOLD, TILE } from "./config.js";
 import { newClock } from "./rules/clock.js";
 import { newRel } from "./rules/relationships.js";
@@ -11,7 +12,16 @@ import { addItem } from "./rules/inventory.js";
 import { VILLAGER_IDS } from "./data/villagers.js";
 import { PLAYER_START, HORSE_START } from "./world/map.js";
 
-export const save = createSave("luna_save", 1);
+export const SAVE_VERSION = 2;
+
+/** `MIGRATIONS[n]` upgrades a v(n) save to v(n+1). */
+export const MIGRATIONS = {
+  // v2: coops keep feed and uncollected eggs.
+  1: (d) => ({ ...d, structures: d.structures.map((st) => (st.type === "coop" ? { hay: 0, eggs: 0, ...st } : st)) }),
+};
+
+export const migrateSave = migrateChain(SAVE_VERSION, MIGRATIONS);
+export const save = createSave("luna_save", SAVE_VERSION, migrateSave);
 
 export const DEFAULT_PROFILE = {
   name: "Luna",

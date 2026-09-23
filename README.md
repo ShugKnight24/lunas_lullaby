@@ -8,10 +8,11 @@ A cozy farming and life sim for the browser. You grow crops, build up your farm,
 npm install
 npm run dev      # http://localhost:3200
 npm test         # vitest: tests/unit/**/*.test.js
+npm run test:e2e # playwright: tests/e2e (starts the dev server if needed)
 npm run build    # production bundle in dist/
 ```
 
-Headless screenshot of the running dev server: `node scripts/shot.mjs http://localhost:3200/ shots/x.png 2000`.
+If Playwright's bundled browser isn't installed, point `CHROME_PATH` at a local Chrome for `test:e2e` and `shot`. Headless screenshot of the running dev server: `node scripts/shot.mjs http://localhost:3200/ shots/x.png 2000`.
 
 ## Controls
 
@@ -35,6 +36,7 @@ Build mode opens from Theo's board by the carpenter shop, or from his workbench 
 - If you are still awake at 2:00 you pass out. You lose 10% of your gold (1000g at most) and wake up with half energy.
 - A season lasts 28 days. Crops that don't belong to the new season wither. Rainy days water every crop for you, and sprinklers water the 4 tiles around them each morning.
 - Tools cost energy, and Honey Loaves from the bakery restore it.
+- A coop houses two hens. Stock it with hay (from the bakery) or fiber, and each hen that finds feed eats one and lays an egg every morning. Press E at the coop to collect them.
 
 ## Layout
 
@@ -43,19 +45,20 @@ index.html, style.css      page shell, cozy DOM theme (Fredoka + Nunito)
 src/main.js                boot, input bindings, window.__game debug/test hooks
 src/engine/                vendored from Clockwork Carnage (SVG raster cache, sprite blitter, loop, input, save…)
 src/game/config.js         tuning constants
-src/game/state.js          save state shape, createSave("luna_save", 1)
+src/game/state.js          save state shape, SAVE_VERSION + MIGRATIONS chain
 src/game/game.js           runtime: levels, actors, clock, transitions, sleep/day rollover, save/load
 src/game/actions.js        tool use, E interactions, gifts/talk, mounting
 src/game/build.js          build mode: ghost, place/move/remove, fence masks
 src/game/fishing.js        cast → bite → timing-bar fishing stub
 src/game/render.js         frame composition, y-sort, day/night grade, glows, build ghost
-src/game/rules/            pure rules (tested): clock, crops, inventory, shipping, relationships, structures, weather, dialogue, day
+src/game/rules/            pure rules (tested): clock, crops, inventory, shipping, relationships, structures, animals, weather, dialogue, day
 src/game/data/             items, crops, structures, villagers, dialogue, forage tables
 src/game/art/              cozy-kit (ink/cel primitives), person, animals, crops, props, icons, sprite registry
 src/game/world/            map layout, levels/collision, ground baking, camera, lighting, weather/fx, pathfinding
 src/game/actors/           player, pet, horse, villagers, chickens
 src/game/ui/               canvas HUD, DOM panels (dialogue, shop, build, journal, pause, summary), title + creator
-tests/unit/                vitest suites for the rules
+tests/unit/                vitest suites for the rules and save migrations
+tests/e2e/                 playwright specs driving window.__game
 ```
 
 ## Art pipeline
@@ -68,4 +71,4 @@ People and pets are built from their creator parameters and cached under a hash 
 
 ## Debug hooks
 
-`window.__game` exposes the runtime (`g`, `state`) and helpers for scripted checks: `newGame`, `teleport(tx, ty, level, dir)`, `select`, `give`, `use`, `interact`, `mount`, `setTime`, `setSeason`, `setWeather`, `sleep`, `save`, `openBuild`, `place`, `hover`, `query`.
+`window.__game` exposes the runtime (`g`, `state`) and helpers for scripted checks: `newGame`, `teleport(tx, ty, level, dir)`, `select` (slot index), `selectItem(id)`, `give`, `use`, `interact`, `mount`, `setTime`, `setSeason`, `setWeather`, `sleep`, `save`, `openBuild`, `place`, `hover`, `query`.

@@ -46,7 +46,7 @@ describe("end of day", () => {
       11: { watered: false, crop: { id: "turnip", days: 0, dead: false } },
       12: { watered: false, crop: null },
     },
-    structures: [{ kind: "sprinkler", tx: 2, ty: 0 }],
+    structures: [{ uid: 1, type: "sprinkler", tx: 2, ty: 0 }],
     forage: {},
     energy: 3,
   });
