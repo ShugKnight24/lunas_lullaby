@@ -56,3 +56,24 @@ export const HEART_EVENTS = {
     reward: "lullaby_loaf",
   },
 };
+
+/**
+ * New-game intro: a letter from Rowan, the farm's previous keeper, then Mira
+ * walks over to say hello. `{pet}` is the pet's name.
+ */
+export const INTRO = {
+  letter: [
+    "Dear {name},",
+    "{farm} is yours now. The soil is kind if you're patient with it, the well water is sweet, and the town will look after you.",
+    "On quiet nights the whole Hollow hums a lullaby to the moon. I hope you'll learn it.",
+    "With love,\nRowan",
+  ],
+  mira: [
+    "There you are! You must be {name}. Welcome to Lullaby Hollow!",
+    "I'm Mira. I run the bakery in town, and I've been keeping an eye on {farm} since Rowan moved to the coast.",
+    "It's a little overgrown, but the field is cleared and the old well by it still works. Rowan swore by that water.",
+    "Anything you drop in the shipping bin by the house, I'll pay for by morning. That's how Rowan got by.",
+    "And this must be {pet}! Hello, sweetheart. A farm always feels more like home with a friend on it.",
+    "I jotted down a little to-do list for your first day. Come find me in town once you've settled in!",
+  ],
+};

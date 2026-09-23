@@ -27,7 +27,8 @@ import { useTool, interact, updateTarget, toggleMount } from "./actions.js";
 import { updateBuild, exitBuild, fenceMasks } from "./build.js";
 import { updateFishing } from "./fishing.js";
 import { renderGame } from "./render.js";
-import { toast, updateHud } from "./ui/hud.js";
+import { toast, updateHud, hotbarSlotAt } from "./ui/hud.js";
+import { queueIntro, updateIntro } from "./progress.js";
 
 const WORLD_DATA = buildWorld(7);
 
@@ -177,8 +178,8 @@ export function newGame(g, profile) {
   loadState(g, newState(profile));
   g.mode = "play";
   fadeIn(g);
-  toast(g, `Welcome to ${profile.farm}, ${profile.name}!`);
   writeSave(g);
+  queueIntro(g);
 }
 
 export function continueGame(g) {
@@ -188,6 +189,7 @@ export function continueGame(g) {
   g.mode = "play";
   fadeIn(g);
   toast(g, `Welcome back, ${s.profile.name}.`);
+  queueIntro(g);
   return true;
 }
 
@@ -304,6 +306,8 @@ export function update(g, dt, t) {
   }
   updateFx(dt);
   updateHud(g, dt);
+  if (g.tutFlash > 0) g.tutFlash -= dt;
+  g.ui.syncHud(g);
   const input = g.input;
 
   if (g.mode === "title") {
@@ -330,6 +334,7 @@ export function update(g, dt, t) {
     return;
   }
   if (g.mode !== "play") return;
+  updateIntro(g, dt);
 
   if (input.pressed("pause")) return g.ui.pause();
   if (input.pressed("journal")) return g.ui.journal("friends");
@@ -356,7 +361,9 @@ export function update(g, dt, t) {
   checkHidden(g);
 
   updateTarget(g, facingTile(p, TGT));
-  if (input.pressed("use") || (input.mouse.clicked && !g.ui.pointerOnUi)) useTool(g);
+  const slotClicked = input.mouse.clicked ? hotbarSlotAt(g.view, input.mouse.x, input.mouse.y) : -1;
+  if (slotClicked >= 0) (g.s.sel = slotClicked), (g.hudFlash = 1.2);
+  else if (input.pressed("use") || (input.mouse.clicked && !g.ui.pointerOnUi)) useTool(g);
   if (input.pressed("interact") || input.mouse.rightClicked) interact(g);
   if (input.pressed("mount")) toggleMount(g);
 

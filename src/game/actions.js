@@ -13,6 +13,8 @@ import { GR, inFarm } from "./world/map.js";
 import { addItem, takeFromSlot } from "./rules/inventory.js";
 import { stockHay, petHen, eggCount, henHearts, FEEDS, COOP_HAY_CAP } from "./rules/animals.js";
 import { sellPrice, qualityName } from "./rules/quality.js";
+import { TOOL_SKILL, toolEnergy, XP, farmingBonus, forageDouble, ranchingPet } from "./rules/skills.js";
+import { award, progress, level } from "./progress.js";
 import { plant, water, harvest, isRipe, clearDead, emptySoil, fertilize } from "./rules/crops.js";
 import { shipItem } from "./rules/shipping.js";
 import { dayIndex } from "./rules/clock.js";
@@ -85,7 +87,7 @@ export function useTool(g) {
   if (def.kind === "fertilizer") return feedSoil(g, slot, tx, ty);
   if (def.kind !== "tool") return toast(g, def.kind === "crop" || def.kind === "forage" || def.kind === "fish" || def.kind === "animal" ? "Ship it in the bin or give it as a gift (E)." : `${def.name}: nothing to do with it here.`);
   if (slot.id === "rod") return startFishing(g);
-  if (!spend(g, def.energy)) return;
+  if (!spend(g, toolEnergy(def.energy, level(g, TOOL_SKILL[slot.id])))) return;
   p.useT = p.useMax;
   p.useItem = slot.id;
   const lv = g.lv;
@@ -132,6 +134,7 @@ function hoe(g, tx, ty, o) {
   g.s.soil[idx] = { ...emptySoil(), watered: g.s.weather === "rain" };
   syncSoil(g, idx);
   burst(FXK.DUST, x, y + 6, 6, 50, 0.5, "rgba(170,120,80,0.8)");
+  progress(g, "till");
 }
 
 function isWaterSource(g, tx, ty, o) {
@@ -145,6 +148,7 @@ function waterTile(g, tx, ty, o) {
   if (isWaterSource(g, tx, ty, o)) {
     g.s.water = CAN_CAPACITY;
     burst(FXK.SPLASH, x, y, 8, 70, 0.6, "#bfe6ff");
+    progress(g, "refill");
     return toast(g, "Watering can refilled!", "can");
   }
   const idx = tileIdx(g, tx, ty);
@@ -153,6 +157,7 @@ function waterTile(g, tx, ty, o) {
   if (g.s.water <= 0) return toast(g, "Your watering can is empty. Refill it at the pond or a well.");
   g.s.water--;
   g.s.soil[idx] = water(t);
+  if (t.crop) progress(g, "water");
   for (let i = 0; i < 6; i++) spawnFx(FXK.DROP, x + (Math.random() - 0.5) * 16, y - 18, (Math.random() - 0.5) * 30, 20, 0.45, "#8fd0ff");
 }
 
@@ -168,6 +173,7 @@ function sow(g, slot, tx, ty) {
   g.player.useT = 0.18;
   g.player.useItem = null;
   burst(FXK.DUST, cx(tx), cy(ty) + 6, 3, 25, 0.4, "rgba(170,120,80,0.7)");
+  progress(g, "plant");
 }
 
 function feedSoil(g, slot, tx, ty) {
@@ -191,9 +197,10 @@ function reap(g, idx, tx, ty) {
     return true;
   }
   const def = CROPS[t.crop.id];
-  const h = harvest(t, def, Math.random());
+  const h = harvest(t, def, Math.random(), farmingBonus(level(g, "farming")));
   if (!h) return false;
   if (!give(g, h.item, h.qty, cx(tx), cy(ty), h.q)) return true;
+  award(g, "farming", XP.harvest(ITEMS[h.item].sell) * h.qty);
   g.s.soil[idx] = h.tile;
   syncSoil(g, idx);
   const d = g.cropDraw.get(idx);
@@ -217,6 +224,7 @@ function chop(g, o) {
         o.hp = 3;
         resolveObject(o, g.s.clock.season);
         give(g, "wood", 5, x, y);
+        award(g, "foraging", XP.tree);
         burst(FXK.LEAF, x, y - 40, 12, 90, 1.4, o.variant === "pine" ? "#4f9570" : "#8cc86a");
       } else {
         removeObj(g, o);
@@ -334,7 +342,7 @@ export function interact(g) {
     if (o.kind === "bin") return ship(g);
     if (o.kind === "board" || (o.kind === "furniture" && o.build)) return g.ui.buildMenu();
     if (o.kind === "furniture" && o.shop) return g.ui.shop();
-    if (o.kind === "furniture" && o.name === "bed") return g.ui.confirm("Go to bed and end the day?", "Sleep", "Not yet", () => sleep(g));
+    if (o.kind === "furniture" && o.name === "bed") return g.ui.confirm("Go to bed and end the day?", "Sleep", "Not yet", () => (progress(g, "sleep"), sleep(g)));
     if (o.kind === "structure" && o.type === "coop") return tendCoop(g, o);
   }
   if (g.lv.id === "world") {
@@ -342,7 +350,12 @@ export function interact(g) {
     const sp = g.spotAt.get(idx);
     const fo = sp && g.s.forage[sp.id];
     if (fo?.item) {
-      if (give(g, fo.item, 1, cx(tx), cy(ty))) g.s.forage[sp.id] = { item: null, next: today(g) + FORAGE_RESPAWN_DAYS };
+      const n = Math.random() < forageDouble(level(g, "foraging")) ? 2 : 1;
+      if (give(g, fo.item, n, cx(tx), cy(ty))) {
+        g.s.forage[sp.id] = { item: null, next: today(g) + FORAGE_RESPAWN_DAYS };
+        award(g, "foraging", XP.forage);
+        progress(g, "forage");
+      }
       return;
     }
     if (g.s.soil[idx]?.crop && reap(g, idx, tx, ty)) return;
@@ -356,6 +369,7 @@ function ship(g) {
   const def = slot && ITEMS[slot.id];
   if (!def || def.kind === "tool" || !def.sell) return toast(g, "Hold something to sell, then press E at the bin.");
   g.s.bin = shipItem(g.s.bin, slot.id, slot.n, slot.q);
+  progress(g, "ship");
   toast(g, `Shipped ${slot.n} × ${qualityName(def.name, slot.q)} (${slot.n * sellPrice(def.sell, slot.q)}g tonight)`, slot.id);
   g.s.inv[g.s.sel] = null;
 }
@@ -378,11 +392,12 @@ function chickenAt(g, x, y) {
 
 function petChicken(g, c) {
   const st = g.s.structures.find((s) => s.uid === c.coop);
-  const r = petHen(st.hens[c.hen], today(g));
+  const r = petHen(st.hens[c.hen], today(g), ranchingPet(level(g, "ranching")));
   st.hens[c.hen] = r.hen;
   const hearts = "♥".repeat(henHearts(r.hen)) || "♡";
   if (!r.gained) return toast(g, `${r.hen.name} is content. ${hearts}`);
   burst(FXK.HEART, c.x, c.y - 20, 3, 30, 1);
+  award(g, "ranching", XP.petHen);
   toast(g, `${r.hen.name} clucks happily! ${hearts}`, "egg");
 }
 
@@ -396,6 +411,7 @@ function tendCoop(g, o) {
     if (!got) return toast(g, "Your bag is full!");
     const fine = st.eggs[1] - left[1] + st.eggs[2] - left[2];
     st.eggs = left;
+    award(g, "ranching", XP.egg * got);
     toast(g, `+${got} Egg${got > 1 ? "s" : ""}${fine ? ` (${fine} extra fine!)` : ""}`, "egg");
     burst(FXK.SPARK, o.x, o.y - 40, 6, 60, 0.6, "#fff6c8");
     return;
@@ -459,6 +475,7 @@ export function toggleMount(g) {
 // ── Villagers ───────────────────────────────────────────────────────────────
 
 function chat(g, v) {
+  progress(g, "talk");
   const rel = g.s.rel[v.id];
   const slot = selected(g);
   const d = today(g);

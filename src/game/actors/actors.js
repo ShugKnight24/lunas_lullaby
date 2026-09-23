@@ -266,7 +266,7 @@ export function currentWaypoint(def, min) {
   return wp;
 }
 
-const doorOf = (levelId) => {
+export const doorOf = (levelId) => {
   const b = BUILDING_SPOTS.find((s) => s.interior === levelId);
   const st = BUILDINGS[b.style];
   return [b.tx + (st.w >> 1), b.ty + st.d - 1];

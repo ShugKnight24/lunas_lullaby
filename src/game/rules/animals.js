@@ -29,10 +29,10 @@ export const newCoop = (uid) => ({
   hens: Array.from({ length: COOP_HENS }, (_, i) => ({ name: HEN_NAMES[(uid * COOP_HENS + i) % HEN_NAMES.length], love: 0, petted: -1 })),
 });
 
-/** Pat a hen once a day: `{ hen, gained }`. */
-export function petHen(hen, day) {
+/** Pat a hen once a day (`extra` from the ranching skill): `{ hen, gained }`. */
+export function petHen(hen, day, extra = 0) {
   if (hen.petted === day) return { hen, gained: 0 };
-  const love = clampLove(hen.love + HEN_LOVE.pet);
+  const love = clampLove(hen.love + HEN_LOVE.pet + extra);
   return { hen: { ...hen, love, petted: day }, gained: love - hen.love };
 }
 

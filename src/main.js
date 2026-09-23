@@ -15,6 +15,7 @@ import { addItem } from "./game/rules/inventory.js";
 import { rollWeather } from "./game/rules/weather.js";
 import { newState } from "./game/state.js";
 import { TILE } from "./game/config.js";
+import { TUTORIAL } from "./game/data/tutorial.js";
 
 const canvas = document.getElementById("game");
 const root = document.getElementById("ui");
@@ -74,7 +75,12 @@ window.__game = {
   get state() {
     return g.s;
   },
-  newGame: (profile) => (document.querySelector(".title, .creator")?.remove(), newGame(g, profile ?? newState().profile)),
+  /** `{ intro: false }` skips the intro and first-day tasks (for scripted checks). */
+  newGame(profile, { intro = true } = {}) {
+    document.querySelector(".title, .creator")?.remove();
+    newGame(g, profile ?? newState().profile);
+    if (!intro) (g.s.flags.intro = true), (g.s.tutorial = { step: TUTORIAL.length, done: true });
+  },
   continueGame: () => (document.querySelector(".title")?.remove(), continueGame(g)),
   teleport(tx, ty, level = "world", dir = "down") {
     g.lv = g.levels[level];

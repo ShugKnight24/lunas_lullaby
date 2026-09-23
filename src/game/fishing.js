@@ -11,6 +11,8 @@ import { FISH } from "./data/fish.js";
 import { waterKind } from "./world/map.js";
 import { fishPool, pickFish, barParams, catchQuality, logCatch } from "./rules/fishing.js";
 import { QUALITY } from "./rules/quality.js";
+import { toolEnergy, fishingZone, XP } from "./rules/skills.js";
+import { award, level } from "./progress.js";
 import { give } from "./actions.js";
 import { setEnergy } from "./game.js";
 import { burst, FXK } from "./world/weather.js";
@@ -25,8 +27,9 @@ export function startFishing(g) {
   let hit = 0;
   for (let k = 1; k <= 3 && !hit; k++) if (g.lv.isWater(tx0 + dx * k, ty0 + dy * k)) hit = k;
   if (!hit) return toast(g, "Face the water to cast your line.");
-  if (g.s.energy < ITEMS.rod.energy) return toast(g, "You're too tired to fish.");
-  setEnergy(g, g.s.energy - ITEMS.rod.energy);
+  const cost = toolEnergy(ITEMS.rod.energy, level(g, "fishing"));
+  if (g.s.energy < cost) return toast(g, "You're too tired to fish.");
+  setEnergy(g, g.s.energy - cost);
   const k = Math.min(3, hit + 1);
   const f = g.fishing;
   f.on = true;
@@ -38,7 +41,7 @@ export function startFishing(g) {
   const s = g.s;
   const pool = fishPool(FISH, { where: waterKind(Math.floor(f.bx / TILE), Math.floor(f.by / TILE)), season: s.clock.season, min: s.clock.min, weather: s.weather });
   f.fish = pickFish(pool, Math.random());
-  const bar = barParams(f.fish ? FISH[f.fish].diff : 0);
+  const bar = barParams(f.fish ? FISH[f.fish].diff : 0, fishingZone(level(g, "fishing")));
   f.wait = 1.2 + Math.random() * 2.4 + (f.fish ? 0 : 2.5);
   f.pos = 0;
   f.vel = bar.vel * (0.9 + Math.random() * 0.2);
@@ -94,6 +97,7 @@ export function updateFishing(g, dt) {
       else if (give(g, f.fish, 1, f.bx, f.by, q)) {
         const first = !g.s.fishLog[f.fish];
         g.s.fishLog = logCatch(g.s.fishLog, f.fish, q);
+        award(g, "fishing", XP.catch(FISH[f.fish].diff, q));
         if (first) toast(g, `New fish for your log: ${FISH[f.fish].name}!`, f.fish);
         else if (q === 2) toast(g, "Perfect catch!");
         burst(FXK.SPLASH, f.bx, f.by, 12, 90, 0.7, "#cfeeff");

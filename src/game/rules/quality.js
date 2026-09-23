@@ -22,12 +22,12 @@ export function rollQuality([silver, gold], r) {
 }
 
 /**
- * Harvest odds from fertilizer tier (0 none, 1 basic, 2 deluxe) and whether
- * the crop was watered every day it grew.
+ * Harvest odds from fertilizer tier (0 none, 1 basic, 2 deluxe), whether the
+ * crop was watered every day it grew, and a skill `bonus` [silver, gold].
  */
-export function cropOdds(fert = 0, tended = false) {
-  const silver = [0.12, 0.3, 0.45][fert];
-  const gold = [0.03, 0.1, 0.25][fert] + (tended ? 0.05 : 0);
+export function cropOdds(fert = 0, tended = false, bonus = [0, 0]) {
+  const silver = [0.12, 0.3, 0.45][fert] + bonus[0];
+  const gold = [0.03, 0.1, 0.25][fert] + (tended ? 0.05 : 0) + bonus[1];
   return [silver, gold];
 }
 

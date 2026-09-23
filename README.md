@@ -25,9 +25,14 @@ If Playwright's bundled browser isn't installed, point `CHROME_PATH` at a local 
 | 1–9 / mouse wheel | Choose hotbar slot |
 | J · R · I (Tab) | Journal · Friends tab · Bag tab |
 | + / − | Zoom |
-| Esc | Pause (controls list, save, quit to title) |
+| Esc | Pause (controls list, save, quit to title, skip first-day tasks) |
+| Click a hotbar slot | Select it |
 
 Build mode opens from Theo's board by the carpenter shop, or from his workbench inside. WASD pans the view, click places, and right click or Esc exits. The bar at the top switches between Place, Move and Remove.
+
+## First day
+
+A new game opens with a letter from Rowan, the farm's previous keeper, and Mira walks over to welcome you. A task card (top left) then walks through the basics — till, plant, water, refill at the farm well, forage, ship, say hello in town, sleep — with an arrow over the well, bin and house when they matter. Finishing it earns a small gift; the pause menu can skip it. The Bag / Journal / Menu buttons sit above the card.
 
 ## How a day goes
 
@@ -40,6 +45,8 @@ Build mode opens from Theo's board by the carpenter shop, or from his workbench 
 - Crops, fish and eggs come in normal, silver and gold quality (1×, 1.25×, 1.5× price). Fertilizer and never letting a crop go dry improve harvests; stopping the reel marker near the middle of the green zone improves fish.
 - Fish depend on the water (river, pond, a hidden pool), season, hour and weather. The journal's Fish tab logs catches and hints at the rest.
 - Winter has one crop, Moonbloom. Snow doesn't water it.
+- Four skills (Journal → Skills) level 0–10 from XP: farming (harvests), foraging (pickups, felling trees), fishing (catches, more for hard fish and better quality) and ranching (petting hens, collecting eggs). Each level trims the energy that skill's tools cost, and each has a perk: better crop odds, double forage finds, a wider reel zone, more affection per pat.
+- The farm well beside the field refills the watering can (face it and press Space), as do the town well and any water.
 
 ## Layout
 
@@ -51,11 +58,12 @@ src/game/config.js         tuning constants
 src/game/state.js          save state shape, SAVE_VERSION + MIGRATIONS chain
 src/game/game.js           runtime: levels, actors, clock, transitions, sleep/day rollover, save/load
 src/game/actions.js        tool use, E interactions, gifts/talk, mounting
+src/game/progress.js       intro scene, skill XP awards, tutorial steps
 src/game/build.js          build mode: ghost, place/move/remove, fence masks
 src/game/fishing.js        cast → bite → timing-bar fishing (fish picked from data/fish.js)
 src/game/render.js         frame composition, y-sort, day/night grade, glows, build ghost
-src/game/rules/            pure rules (tested): clock, crops, inventory, shipping, quality, fishing, relationships, structures, animals, weather, dialogue, day
-src/game/data/             items, crops, fish, structures, villagers, dialogue, forage tables
+src/game/rules/            pure rules (tested): clock, crops, inventory, shipping, quality, fishing, skills, tutorial, relationships, structures, animals, weather, dialogue, day
+src/game/data/             items, crops, fish, structures, villagers, dialogue (incl. intro), tutorial, forage tables
 src/game/art/              cozy-kit (ink/cel primitives), person, animals, crops, props, icons, sprite registry
 src/game/world/            map layout, levels/collision, ground baking, camera, lighting, weather/fx, pathfinding
 src/game/actors/           player, pet, horse, villagers, chickens
@@ -74,4 +82,4 @@ People and pets are built from their creator parameters and cached under a hash 
 
 ## Debug hooks
 
-`window.__game` exposes the runtime (`g`, `state`) and helpers for scripted checks: `newGame`, `teleport(tx, ty, level, dir)`, `select` (slot index), `selectItem(id)`, `give`, `use`, `interact`, `mount`, `setTime`, `setSeason`, `setWeather`, `sleep`, `save`, `openBuild`, `place`, `hover`, `query`.
+`window.__game` exposes the runtime (`g`, `state`) and helpers for scripted checks: `newGame(profile, { intro: false })`, `teleport(tx, ty, level, dir)`, `select` (slot index), `selectItem(id)`, `give`, `use`, `interact`, `mount`, `setTime`, `setSeason`, `setWeather`, `sleep`, `save`, `openBuild`, `place`, `hover`, `query`.

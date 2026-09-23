@@ -1,7 +1,8 @@
 /**
- * DOM overlay panels: dialogue box, shop, build menu + build bar, journal
- * (friends / bag / farm), pause, confirm, name prompt and the end-of-day
- * summary. While any panel is open the game loop idles (`ui.isOpen()`);
+ * DOM overlay panels: dialogue box, letter, shop, build menu + build bar,
+ * journal (friends / bag / fish / skills / farm), pause, confirm, name prompt
+ * and the end-of-day summary; plus the always-on HUD strip (Bag / Journal /
+ * Menu buttons and the first-day task card). While any panel is open the game loop idles (`ui.isOpen()`);
  * panel keys are captured before the game's input sees them.
  */
 
@@ -17,6 +18,9 @@ import { addItem, countItem } from "../rules/inventory.js";
 import { seasonName, weekday } from "../rules/clock.js";
 import { affordable } from "../rules/structures.js";
 import { henHearts } from "../rules/animals.js";
+import { SKILLS, SKILL_NAMES, PERKS, skillProgress, MAX_LEVEL } from "../rules/skills.js";
+import { skipTutorial } from "../rules/tutorial.js";
+import { TUTORIAL } from "../data/tutorial.js";
 import { iconSvg } from "../art/icons.js";
 import { qualityName } from "../rules/quality.js";
 import { portraitSvg } from "../art/person.js";
@@ -92,6 +96,43 @@ export function createUI(root) {
   );
 
   ui.isOpen = () => !!top;
+
+  // ── HUD strip: Bag / Journal / Menu, and the first-day task card ──
+  const count = h("span.count");
+  const hudBtn = (label, key, onclick, extra) => h("button.hudbtn", { onclick, title: `${label} (${key})` }, h("span", {}, label), extra, h("kbd.key", {}, key));
+  const task = h("div.task", { role: "status", "aria-live": "polite" });
+  const strip = h(
+    "div.hudstrip",
+    {},
+    h("div.hudbtns", {}, hudBtn("Bag", "I", () => ui.journal("items"), count), hudBtn("Journal", "J", () => ui.journal("friends")), hudBtn("Menu", "Esc", () => ui.pause())),
+    task,
+  );
+  strip.addEventListener("pointerenter", () => (ui.pointerOnUi = true));
+  strip.addEventListener("pointerleave", () => (ui.pointerOnUi = false));
+  root.append(strip);
+  let hudKey = "";
+  /** Refresh the strip when what it shows changes (called every frame). */
+  ui.syncHud = (g) => {
+    const s = g.s;
+    const tut = s.tutorial;
+    const showTask = g.mode !== "title" && s.flags.intro && !tut.done;
+    const used = s.inv.filter(Boolean).length;
+    const key = `${g.mode}|${used}|${showTask}|${tut.step}|${g.tutFlash > 0}`;
+    if (key === hudKey) return;
+    hudKey = key;
+    strip.hidden = g.mode === "title" || g.mode === "build";
+    count.textContent = `${used}/${s.inv.length}`;
+    task.hidden = !showTask;
+    task.classList.toggle("flash", g.tutFlash > 0);
+    if (!showTask) return;
+    const step = TUTORIAL[tut.step];
+    task.replaceChildren(
+      h("div.taskhead", {}, h("b", {}, "First day"), h("span", {}, `${tut.step + 1} / ${TUTORIAL.length}`)),
+      h("div.taskbar", {}, h("span", { style: `width:${(tut.step / TUTORIAL.length) * 100}%` })),
+      h("p", {}, step.text),
+      h("small", {}, step.key),
+    );
+  };
   ui.close = close;
 
   // ── Dialogue ──
@@ -130,6 +171,18 @@ export function createUI(root) {
     box.addEventListener("click", next);
     open(box, { cls: "bottom", closable: false, onKey: (e) => (["KeyE", "Space", "Enter", "Escape"].includes(e.code) ? (next(), true) : false) });
     show();
+  };
+
+  // ── Letter ──
+  ui.letter = (paras, onDone) => {
+    const done = () => (close(), onDone?.());
+    const box = h(
+      "div.panel.letter",
+      {},
+      paras.map((p) => h("p", {}, p)),
+      h("div.row", {}, h("button.btn.primary", { onclick: done }, "Fold the letter")),
+    );
+    open(box, { closable: false, onKey: (e) => (["Enter", "Space", "KeyE", "Escape"].includes(e.code) ? (done(), true) : false) });
   };
 
   // ── Confirm / name prompt ──
@@ -253,7 +306,7 @@ export function createUI(root) {
     let pick = -1;
     const show = (t) => {
       tab = t;
-      tabs.replaceChildren(...[["friends", "Friends"], ["items", "Bag"], ["fish", "Fish"], ["farm", "Farm"]].map(([id, label]) => h(`button.tab${id === t ? ".on" : ""}`, { onclick: () => show(id) }, label)));
+      tabs.replaceChildren(...[["friends", "Friends"], ["items", "Bag"], ["fish", "Fish"], ["skills", "Skills"], ["farm", "Farm"]].map(([id, label]) => h(`button.tab${id === t ? ".on" : ""}`, { onclick: () => show(id) }, label)));
       if (t === "friends") {
         body.replaceChildren(
           ...VILLAGER_IDS.map((id) => {
@@ -297,6 +350,25 @@ export function createUI(root) {
           );
         draw();
         body.replaceChildren(grid, h("p.note", {}, "Click two slots to swap them. The top row is your hotbar (keys 1–9)."));
+      } else if (t === "skills") {
+        body.replaceChildren(
+          h(
+            "div.skills",
+            {},
+            SKILLS.map((id) => {
+              const p = skillProgress(g.s.skills[id]);
+              const pct = p.need ? Math.round((p.into / p.need) * 100) : 100;
+              return h(
+                "div.skill",
+                {},
+                h("div.skillhead", {}, h("b", {}, SKILL_NAMES[id]), h("span.lvl", {}, `Level ${p.level}${p.level >= MAX_LEVEL ? " · max" : ""}`)),
+                h("div.xpbar", { role: "progressbar", "aria-valuenow": pct, "aria-valuemin": 0, "aria-valuemax": 100, "aria-label": `${SKILL_NAMES[id]} progress` }, h("span", { style: `width:${pct}%` })),
+                h("small", {}, p.need ? `${p.into} / ${p.need} XP to level ${p.level + 1}` : "Mastered!"),
+                h("small.perk", {}, `Each level: tools cost less energy. ${PERKS[id]}.`),
+              );
+            }),
+          ),
+        );
       } else if (t === "fish") {
         const log = g.s.fishLog;
         const caught = FISH_IDS.filter((id) => log[id]).length;
@@ -362,6 +434,7 @@ export function createUI(root) {
       h("h2", {}, "Paused"),
       h("div.controls", {}, keys.map(([k, d]) => h("div.ctl", {}, h("kbd", {}, k), h("span", {}, d)))),
       h("div.row", {}, h("button.btn.primary", { onclick: close }, "Resume"), h("button.btn", { onclick: () => (writeSave(g), toast(g, "Game saved."), close()) }, "Save"), h("button.btn", { onclick: () => (writeSave(g), close(), ui.onQuit?.()) }, "Save & Quit")),
+      g.s.tutorial.done ? null : h("div.row", {}, h("button.btn.link", { onclick: () => ((g.s.tutorial = skipTutorial(g.s.tutorial, TUTORIAL)), close()) }, "Skip the first-day tasks")),
     );
     open(box);
   };

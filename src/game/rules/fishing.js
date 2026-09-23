@@ -28,8 +28,8 @@ export function pickFish(pool, r) {
   return pool.length ? pool[pool.length - 1].id : null;
 }
 
-/** Reel bar tuning: marker speed, green zone width and the bite reaction window (s). */
-export const barParams = (diff) => ({ vel: 0.9 + diff * 1.5, zoneW: 0.26 - diff * 0.14, bite: 0.9 - diff * 0.35 });
+/** Reel bar tuning: marker speed, green zone width (+ skill `zone` bonus) and the bite reaction window (s). */
+export const barParams = (diff, zone = 0) => ({ vel: 0.9 + diff * 1.5, zoneW: 0.26 - diff * 0.14 + zone, bite: 0.9 - diff * 0.35 });
 
 /**
  * Where the marker stopped relative to the zone: null (missed), or a quality

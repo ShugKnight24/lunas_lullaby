@@ -12,7 +12,7 @@ test("till, plant, water, sleep: the crop grows one day", async ({ page }) => {
   const soil = await page.evaluate(async ({ tx, ty }) => {
     const G = window.__game;
     const beat = () => new Promise((r) => setTimeout(r, 300));
-    G.newGame();
+    G.newGame(undefined, { intro: false });
     G.teleport(tx, ty, "world", "right");
     for (const id of ["hoe", "turnip_seed", "can"]) {
       if (G.selectItem(id) < 0) throw new Error(`missing ${id}`);
@@ -38,7 +38,7 @@ test("a stocked coop lays eggs overnight and E collects them", async ({ page }) 
 
   const coop = await page.evaluate(() => {
     const G = window.__game;
-    G.newGame();
+    G.newGame(undefined, { intro: false });
     G.state.gold = 5000;
     G.give("wood", 60);
     G.give("stone", 30);
@@ -97,7 +97,7 @@ test("fishing off the pier lands a gold fish and logs it", async ({ page }) => {
   await page.waitForFunction(() => window.__game);
   const fish = await page.evaluate(() => {
     const G = window.__game;
-    G.newGame();
+    G.newGame(undefined, { intro: false });
     G.setTime(600);
     G.teleport(87, 44, "world", "right");
     G.selectItem("rod");

@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { createSave, migrateChain } from "../../src/engine/save.js";
 import { newState, migrateSave, SAVE_VERSION } from "../../src/game/state.js";
 import { newCoop } from "../../src/game/rules/animals.js";
+import { FARM_WELL } from "../../src/game/world/map.js";
+import { MAP_W } from "../../src/game/config.js";
 
 const V1 = JSON.parse(readFileSync(new URL("../fixtures/save-v1.json", import.meta.url), "utf8"));
 
@@ -63,6 +65,28 @@ describe("game save", () => {
     expect(s.structures[0]).toEqual({ uid: 4, type: "coop", tx: 10, ty: 10, ...newCoop(4) });
     expect(s.structures[1]).toEqual({ uid: 5, type: "fence", tx: 1, ty: 1 });
     expect(s.fishLog).toEqual({});
+  });
+
+  it("v3 saves gain skills, skip the intro and tutorial, and clear the farm well's tiles", () => {
+    const soilKey = (x, y) => y * MAP_W + x;
+    const v3 = {
+      ...structuredClone(V1),
+      v: 3,
+      fishLog: {},
+      gold: 100,
+      structures: [
+        { uid: 1, type: "fence", tx: FARM_WELL.tx, ty: FARM_WELL.ty },
+        { uid: 2, type: "fence", tx: 20, ty: 40 },
+      ],
+      soil: { [soilKey(FARM_WELL.tx + 1, FARM_WELL.ty)]: { watered: false, crop: null }, 2325: { watered: false, crop: null } },
+    };
+    const s = migrateSave(v3);
+    expect(s.skills).toEqual({ farming: 0, foraging: 0, fishing: 0, ranching: 0 });
+    expect(s.tutorial.done).toBe(true);
+    expect(s.flags.intro).toBe(true);
+    expect(s.structures.map((st) => st.uid)).toEqual([2]);
+    expect(Object.keys(s.soil)).toEqual(["2325"]);
+    expect(s.inv.find((x) => x?.id === "wood")).toEqual({ id: "wood", n: 1 });
   });
 
   it("v2 coops keep their eggs as normal quality", () => {

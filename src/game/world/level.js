@@ -104,7 +104,7 @@ export function createWorldLevel(data) {
   const lv = new Level("world", data.w, data.h, true);
   lv.ground.set(data.ground);
   lv.wall.set(data.solid);
-  data.objects.forEach((spec, i) => lv.add(makeObject(spec, i + 1)));
+  data.objects.forEach((spec, i) => spec.skip || lv.add(makeObject(spec, i + 1)));
   for (const b of BUILDING_SPOTS) {
     if (!b.interior) continue;
     const st = BUILDINGS[b.style];

@@ -20,10 +20,12 @@ Thin or missing:
 | Fishing | ~~Stub~~ done: 12 fish by water/season/hour/weather, difficulty, quality, log |
 | Social | 3 villagers; heart events are a single 2-heart stub; schedules are by hour only (no day/weather variation) |
 | Winter | ~~No winter crops~~ Moonbloom grows in winter; winter fish. Still no festival |
-| Progression | No tool upgrades, crafting, cooking, or a long-term goal |
+| Progression | Skills done (4 skills, levels 0–10, perks). No tool upgrades, crafting, cooking, or long-term goal |
 | Audio | None |
 | Saves | ~~No migrations~~ done: v2 with a migration chain and a frozen v1 fixture |
-| Tests | ~~Rules only~~ done: Playwright day-loop and coop specs |
+| Tests | ~~Rules only~~ done: Playwright day-loop, coop, fishing, onboarding and well specs |
+| Onboarding | ~~None~~ done: intro letter + Mira's welcome, 8-step first-day task card with world arrows |
+| HUD | ~~Minimal~~ done: Bag/Journal/Menu buttons, bin payout chip, energy number, clickable hotbar, phone-width layout |
 
 ## Phase 0: foundations ✅
 
@@ -55,8 +57,9 @@ undefined energy" for non-food items.
 
 ## Phase 2: progression
 
-1. **Skills.** Farming, foraging, fishing, and ranching XP with level-up
-   perks (energy discount, quality chance, recipes unlocked).
+1. **Skills.** ✅ Farming, foraging, fishing and ranching XP, levels 0–10;
+   each level trims tool energy, plus one perk per skill (`rules/skills.js`).
+   Next: recipe unlocks at levels 3/6/9 once crafting exists.
 2. **Crafting.** A recipe table plus a craft panel: sprinkler tiers, fertilizer,
    bait, chests, and preserves jars/kegs (artisan goods, which Harvest Moon and
    Stardew both use as the mid-game money curve).
@@ -95,8 +98,8 @@ undefined energy" for non-food items.
 
 ## Suggested next three tasks
 
-1. Skills (Phase 2.1): farming/fishing/foraging/ranching XP, feeding the
-   quality odds that already exist
-2. Crafting (Phase 2.2): recipe table + panel; fertilizer and sprinklers
-   become craftable instead of shop-only
-3. Villager schedule variants (Phase 3.1): rainy-day and weekday routes
+1. Crafting (Phase 2.2): recipe table + panel; fertilizer and sprinklers
+   become craftable, with recipes unlocked by skill level
+2. Villager schedule variants (Phase 3.1): rainy-day and weekday routes
+3. Audio (Phase 4): procedural ambient music and tool SFX — the game is
+   silent, and it's the biggest remaining feel gap

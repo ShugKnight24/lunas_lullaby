@@ -71,11 +71,12 @@ export function seasonChange(tile, def, season) {
 
 /**
  * Harvest a ripe crop: `{ tile, item, qty, q }` or null when not ripe. `r`
- * rolls the quality from the soil's fertilizer and whether it never went dry.
+ * rolls the quality from the soil's fertilizer, whether it never went dry
+ * and the farming skill `bonus`.
  */
-export function harvest(tile, def, r = 1) {
+export function harvest(tile, def, r = 1, bonus = [0, 0]) {
   if (!tile.crop || !isRipe(tile.crop, def)) return null;
-  const q = rollQuality(cropOdds(tile.fert ?? 0, !tile.crop.missed), r);
+  const q = rollQuality(cropOdds(tile.fert ?? 0, !tile.crop.missed, bonus), r);
   const crop = def.regrow ? { id: tile.crop.id, days: totalDays(def) - def.regrow, dead: false } : null;
   return { tile: { ...tile, crop }, item: def.produce, qty: def.yield, q };
 }

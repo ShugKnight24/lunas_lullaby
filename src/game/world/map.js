@@ -49,6 +49,8 @@ export const PLAYER_START = { tx: 8, ty: 11 };
 export const HORSE_START = { tx: 5, ty: 25 };
 export const BOARD = { tx: 63, ty: 22 };
 export const BIN = { tx: 12, ty: 8 };
+/** Farm well (2×2, top-left) between the house path and the field, on its own paving. */
+export const FARM_WELL = { tx: 10, ty: 16 };
 export const HIDDEN = [
   { id: "hollow", name: "Whispering Hollow", x0: 86, y0: 3, x1: 92, y1: 8 },
   { id: "pool", name: "Moonlit Pool", x0: 4, y0: 63, x1: 12, y1: 68 },
@@ -256,7 +258,23 @@ export function buildWorld(seed = 7) {
   spot(5, 65, true);
   spot(11, 66, true);
 
+  addFarmWell(ground, objects, spots, idx);
   return { w: W, h: H, ground, solid, objects, spots };
+}
+
+/**
+ * The farm well came after the first saves, and world object ids are their
+ * list positions (saved in `objs`). So it is appended last, and anything the
+ * generator left on its paving is flagged `skip` rather than removed, keeping
+ * every other id where it was.
+ */
+function addFarmWell(ground, objects, spots, idx) {
+  const { tx, ty } = FARM_WELL;
+  const onPave = (x, y) => x >= tx - 1 && x <= tx + 2 && y >= ty - 1 && y <= ty + 2;
+  for (let y = ty - 1; y <= ty + 2; y++) for (let x = tx - 1; x <= tx + 2; x++) ground[idx(x, y)] = GR.PATH;
+  for (const o of objects) if (onPave(o.tx, o.ty)) o.skip = true;
+  for (let i = spots.length - 1; i >= 0; i--) if (onPave(spots[i].tx, spots[i].ty)) spots.splice(i, 1); // spot ids are explicit
+  objects.push({ kind: "well", tx, ty, farm: true });
 }
 
 /** Interior layouts: size, wall/floor colours, furniture and the exit. */
