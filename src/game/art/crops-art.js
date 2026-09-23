@@ -48,6 +48,7 @@ function grown(id, def) {
   if (id === "tomato") return stem("M5 0V-30", "#a8784a", 2) + bushy(g, 1.05) + circle(-4, -14, 3, "#8ccf6a", { s: 0.8, w: 1.1 }) + circle(5, -19, 3, "#8ccf6a", { s: 0.8, w: 1.1 });
   if (id === "pumpkin") return mound() + leaf([0, -2], 110, 14, 5, g) + leaf([0, -2], 250, 14, 5, g) + leaf([0, -3], 180, 12, 5, lite(g, 0.1)) + circle(5, -4, 4, "#9ccf6a", { s: 0.8 });
   if (id === "strawberry") return mound() + bushy(g, 0.85) + circle(-5, -10, 2.2, "#fff8f0", { s: 0.6, w: 1 }) + circle(5, -12, 2.2, "#fff8f0", { s: 0.6, w: 1 });
+  if (id === "moonbloom") return stem("M0 0V-24", "#4f7a98", 2.2) + leaf([0, -8], 125, 10, 3.6, g) + leaf([0, -14], 235, 10, 3.6, g) + circle(0, -26, 3.6, lite(g, 0.3), { s: 1 });
   return mound() + bushy(g, id === "turnip" ? 0.95 : 0.9);
 }
 
@@ -82,6 +83,12 @@ function ripe(id, def) {
       part(ellD(0, -7, 12, 8.5), c, { s: 2 }) + line("M-4 -14Q-6 -7 -4 0M4 -14Q6 -7 4 0M0 -15V1", 1.1, dark(c, 0.35)) +
       hi(-6, -10, 2, 2.6, 0.55) + stem("M0 -15Q1 -18 3 -19", "#6a8a3a", 2)
     );
+  if (id === "moonbloom") {
+    // Pale five-point bloom on a slim stem, with a moon-gold heart.
+    let petals = "";
+    for (let i = 0; i < 5; i++) petals += part(leafD([0, -28], i * 72, 9, 4.4), c, { s: 0.8, w: 1.1 });
+    return stem("M0 0V-26", "#4f7a98", 2.2) + leaf([0, -8], 125, 11, 4, g) + leaf([0, -15], 235, 11, 4, g) + petals + circle(0, -28, 3, "#f6d86a", { s: 0.8 }) + hi(-2.5, -31, 1.4, 1, 0.8);
+  }
   if (id === "cranberry") {
     let m = mound() + bushy(g, 0.95);
     const pts = [[-7, -9], [-3, -14], [3, -11], [7, -7], [0, -6], [-5, -4], [5, -15], [1, -17]];

@@ -18,6 +18,7 @@ export const ITEMS = {
   tomato_seed: { name: "Tomato Seeds", kind: "seed", crop: "tomato", price: 50 },
   sunflower_seed: { name: "Sunflower Seeds", kind: "seed", crop: "sunflower", price: 110 },
   pumpkin_seed: { name: "Pumpkin Seeds", kind: "seed", crop: "pumpkin", price: 100 },
+  moonbloom_seed: { name: "Moonbloom Seeds", kind: "seed", crop: "moonbloom", price: 120 },
   cranberry_seed: { name: "Cranberry Seeds", kind: "seed", crop: "cranberry", price: 200 },
 
   turnip: { name: "Turnip", kind: "crop", sell: 40 },
@@ -26,6 +27,7 @@ export const ITEMS = {
   sunflower: { name: "Sunflower", kind: "crop", sell: 150 },
   pumpkin: { name: "Pumpkin", kind: "crop", sell: 320 },
   cranberry: { name: "Cranberries", kind: "crop", sell: 75 },
+  moonbloom: { name: "Moonbloom", kind: "crop", sell: 280 },
 
   spring_onion: { name: "Spring Onion", kind: "forage", sell: 12 },
   leek: { name: "Wild Leek", kind: "forage", sell: 60 },

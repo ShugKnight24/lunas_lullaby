@@ -35,6 +35,7 @@ const DRAW = {
   sunflower: () => cropIcon("sunflower"),
   pumpkin: () => cropIcon("pumpkin"),
   cranberry: () => cropIcon("cranberry"),
+  moonbloom: () => cropIcon("moonbloom"),
 
   spring_onion: () => leaf([0, 2], 170, 18, 2.6, "#7ec06a") + leaf([0, 2], 195, 16, 2.6, "#6ab05a") + part("M-4 2C-5 8 5 8 4 2C3 0 -3 0 -4 2Z", "#f6f0f4", { s: 1 }) + line("M-1 8V11M1 8V11.5", 0.8, "#c8b8a8"),
   leek: () => leaf([0, 0], 165, 16, 3.4, "#5aa05a") + leaf([0, 0], 200, 15, 3.4, "#7cc06a") + part(rrD(-3, -1, 6, 13, 3), "#f4f6e8", { s: 1 }),
@@ -77,6 +78,11 @@ function cropIcon(id) {
     let p = "";
     for (let i = 0; i < 10; i++) p += part(leafD([0, 0], i * 36, 12, 4), c, { s: 0.6, w: 1.1 });
     return p + circle(0, 0, 6, "#7a4a2a", { s: 1 }) + fill(ellD(-2, -2, 1.8, 1.4), "#a86a3a");
+  }
+  if (id === "moonbloom") {
+    let p = "";
+    for (let i = 0; i < 5; i++) p += part(leafD([0, 0], i * 72, 12, 6), c, { s: 1, w: 1.2 });
+    return p + circle(0, 0, 4, "#f6d86a", { s: 0.8 }) + hi(-4, -5, 2, 1.2, 0.8);
   }
   if (id === "pumpkin") return part(ellD(0, 2, 13, 10), c, { s: 2 }) + line("M-5 -7Q-8 2 -5 11M5 -7Q8 2 5 11M0 -8V12", 1.1, dark(c, 0.35)) + line("M0 -8Q1 -12 4 -13", 3.4, INK) + line("M0 -8Q1 -12 4 -13", 2, "#6a8a3a") + hi(-7, -2, 2, 2.8, 0.55);
   let m = "";

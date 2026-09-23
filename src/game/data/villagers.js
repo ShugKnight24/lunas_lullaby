@@ -9,7 +9,7 @@ export const VILLAGERS = {
     name: "Mira",
     role: "Baker",
     look: { skin: 1, hair: "buns", hairColor: "#b0603a", eyes: "#6a3f2a", top: "#f4a6b8", bottom: "#8a6a9a", hat: "none", apron: "#fff4ea" },
-    loves: ["strawberry", "blackberry", "star_shard"],
+    loves: ["strawberry", "blackberry", "star_shard", "moonbloom"],
     likes: ["turnip", "salmonberry", "pumpkin", "sunflower", "cranberry", "egg"],
     dislikes: ["stone", "fiber", "carp"],
     schedule: [[0, "bakery_counter"], [960, "plaza_bench"], [1110, "bakery_door"], [1140, "bakery_home"]],

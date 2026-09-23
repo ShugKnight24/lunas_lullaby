@@ -36,7 +36,10 @@ Build mode opens from Theo's board by the carpenter shop, or from his workbench 
 - If you are still awake at 2:00 you pass out. You lose 10% of your gold (1000g at most) and wake up with half energy.
 - A season lasts 28 days. Crops that don't belong to the new season wither. Rainy days water every crop for you, and sprinklers water the 4 tiles around them each morning.
 - Tools cost energy, and Honey Loaves from the bakery restore it.
-- A coop houses two hens. Stock it with hay (from the bakery) or fiber, and each hen that finds feed eats one and lays an egg every morning. Press E at the coop to collect them.
+- A coop houses two named hens. Stock it with hay (from the bakery) or fiber, and each hen that finds feed eats one and lays an egg every morning. Press E at the coop to collect them. Pet each hen once a day; happier hens lay silver and gold eggs.
+- Crops, fish and eggs come in normal, silver and gold quality (1×, 1.25×, 1.5× price). Fertilizer and never letting a crop go dry improve harvests; stopping the reel marker near the middle of the green zone improves fish.
+- Fish depend on the water (river, pond, a hidden pool), season, hour and weather. The journal's Fish tab logs catches and hints at the rest.
+- Winter has one crop, Moonbloom. Snow doesn't water it.
 
 ## Layout
 
@@ -49,10 +52,10 @@ src/game/state.js          save state shape, SAVE_VERSION + MIGRATIONS chain
 src/game/game.js           runtime: levels, actors, clock, transitions, sleep/day rollover, save/load
 src/game/actions.js        tool use, E interactions, gifts/talk, mounting
 src/game/build.js          build mode: ghost, place/move/remove, fence masks
-src/game/fishing.js        cast → bite → timing-bar fishing stub
+src/game/fishing.js        cast → bite → timing-bar fishing (fish picked from data/fish.js)
 src/game/render.js         frame composition, y-sort, day/night grade, glows, build ghost
-src/game/rules/            pure rules (tested): clock, crops, inventory, shipping, relationships, structures, animals, weather, dialogue, day
-src/game/data/             items, crops, structures, villagers, dialogue, forage tables
+src/game/rules/            pure rules (tested): clock, crops, inventory, shipping, quality, fishing, relationships, structures, animals, weather, dialogue, day
+src/game/data/             items, crops, fish, structures, villagers, dialogue, forage tables
 src/game/art/              cozy-kit (ink/cel primitives), person, animals, crops, props, icons, sprite registry
 src/game/world/            map layout, levels/collision, ground baking, camera, lighting, weather/fx, pathfinding
 src/game/actors/           player, pet, horse, villagers, chickens

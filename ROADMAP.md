@@ -16,10 +16,10 @@ Thin or missing:
 
 | Area | Gap |
 | --- | --- |
-| Animals | ~~No eggs~~ done: feed + eggs. Still no per-hen friendship, egg quality, or barn |
-| Fishing | Stub: 3 fish, one timing bar, no location/season/time tables |
+| Animals | ~~No eggs~~ done: feed, eggs, named hens with affection and egg quality. Still no barn |
+| Fishing | ~~Stub~~ done: 12 fish by water/season/hour/weather, difficulty, quality, log |
 | Social | 3 villagers; heart events are a single 2-heart stub; schedules are by hour only (no day/weather variation) |
-| Winter | No winter crops, so the season has nothing to do |
+| Winter | ~~No winter crops~~ Moonbloom grows in winter; winter fish. Still no festival |
 | Progression | No tool upgrades, crafting, cooking, or a long-term goal |
 | Audio | None |
 | Saves | ~~No migrations~~ done: v2 with a migration chain and a frozen v1 fixture |
@@ -41,16 +41,17 @@ undefined energy" for non-food items.
 
 ## Phase 1: finish the core loop
 
-1. **Animal care.** ✅ Coops take hay or fiber and hens lay eggs daily
-   (`rules/animals.js`). Next: petting and friendship per hen, egg quality,
-   a Barn (cow → milk), and hay from cutting grass once a silo exists.
-2. **Fishing v2.** Fish table keyed by location (pond/river/sea) × season ×
-   time × weather, rarity-weighted. Difficulty maps to bar speed and zone
-   size. Add a fishing log to the journal.
-3. **Winter content.** Winter forage is already in; add winter seeds
-   (greenhouse-only or a hardy crop), ice fishing, and a winter festival hook.
-4. **Crop quality.** Normal/silver/gold, driven by fertilizer and a farming
-   skill. Sell multipliers flow through `rules/shipping.js`.
+1. **Animal care.** ✅ Coops take hay or fiber; named hens are petted daily
+   and their affection sets egg quality (`rules/animals.js`). Next: a Barn
+   (cow → milk) and hay from cutting grass once a silo exists.
+2. **Fishing v2.** ✅ 12 fish keyed by water (river, pond, hidden pool) ×
+   season × hour × weather (`data/fish.js`, `rules/fishing.js`). Difficulty
+   sets the bar; stopping near the middle gives silver/gold; journal log.
+3. **Winter content.** ✅ Moonbloom (winter-only crop) and winter fish. Next:
+   a winter festival hook.
+4. **Quality.** ✅ Normal/silver/gold stacks (`rules/quality.js`) for crops
+   (fertilizer + never-dry bonus), fish and eggs. Farming skill feeds in
+   once Phase 2.1 lands.
 
 ## Phase 2: progression
 
@@ -94,6 +95,8 @@ undefined energy" for non-food items.
 
 ## Suggested next three tasks
 
-1. Fishing v2 (Phase 1.2): fish tables by location, season, time and weather
-2. Crop quality (Phase 1.4), which unlocks meaningful fertilizer and skills later
-3. Hen friendship and egg quality (rest of Phase 1.1)
+1. Skills (Phase 2.1): farming/fishing/foraging/ranching XP, feeding the
+   quality odds that already exist
+2. Crafting (Phase 2.2): recipe table + panel; fertilizer and sprinklers
+   become craftable instead of shop-only
+3. Villager schedule variants (Phase 3.1): rainy-day and weekday routes

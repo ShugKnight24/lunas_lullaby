@@ -182,7 +182,7 @@ export function createUI(root) {
       );
     };
     render();
-    const box = h("div.panel.wide", {}, h("header", {}, h("h2", {}, "Mira's Bakery & Seeds"), gold), g.s.clock.season === 3 ? h("p.note", {}, "Nothing grows in winter — come back in spring for seeds!") : null, list, h("div.row", {}, h("button.btn", { onclick: close }, "Close")));
+    const box = h("div.panel.wide", {}, h("header", {}, h("h2", {}, "Mira's Bakery & Seeds"), gold), g.s.clock.season === 3 ? h("p.note", {}, "Only Moonbloom braves the frost. Snow won't water it for you!") : null, list, h("div.row", {}, h("button.btn", { onclick: close }, "Close")));
     open(box);
   };
 
