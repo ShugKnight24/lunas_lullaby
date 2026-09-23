@@ -382,7 +382,7 @@ export function update(g, dt, t) {
   updateTarget(g, facingTile(p, TGT));
   const slotClicked = input.mouse.clicked ? hotbarSlotAt(g.view, input.mouse.x, input.mouse.y) : -1;
   if (slotClicked >= 0) (g.s.sel = slotClicked), (g.hudFlash = 1.2);
-  else if (input.pressed("use") || (input.mouse.clicked && !g.ui.pointerOnUi)) useTool(g);
+  else if (input.pressed("use") || input.mouse.clicked) useTool(g); // mouse.clicked only fires on the canvas itself
   if (input.pressed("interact") || input.mouse.rightClicked) interact(g);
   if (input.pressed("mount")) toggleMount(g);
 

@@ -72,9 +72,10 @@ input.text:focus { box-shadow: 0 0 0 4px var(--rose-soft); }
 .letter p:last-of-type { text-align: right; font-family: var(--display); font-weight: 600; }
 
 /* ── HUD strip ── */
-.hudstrip { position: absolute; top: 14px; left: 16px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; width: min(400px, 60vw); }
+.hudstrip { pointer-events: none; position: absolute; top: 14px; left: 16px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; width: min(400px, 60vw); }
 .hudstrip[hidden], .task[hidden] { display: none; }
 .hudbtns { display: flex; gap: 8px; flex-wrap: wrap; }
+.hudbtns > *, .task { pointer-events: auto; }
 .hudbtn { display: inline-flex; align-items: center; gap: 6px; font: 600 15px var(--display); color: var(--ink); background: var(--cream); border: 2.5px solid var(--ink); border-radius: 14px; padding: 6px 10px; box-shadow: 0 3px 0 var(--shadow); cursor: pointer; }
 .hudbtn:hover { background: #fff; }
 .hudbtn:focus-visible { outline: 3px solid var(--rose); outline-offset: 2px; }

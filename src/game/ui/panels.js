@@ -63,7 +63,7 @@ const hint = (f) => {
 const heartRow = (n) => h("div.hearts", {}, Array.from({ length: 10 }, (_, i) => h(`span.heart${i < n ? ".on" : ""}`, { html: "&#9829;" })));
 
 export function createUI(root) {
-  const ui = { g: null, pointerOnUi: false, stack: [], typing: null, buildBarEl: null };
+  const ui = { g: null, stack: [], typing: null, buildBarEl: null };
   let top = null; // { el, onKey, modal }
 
   function open(el, { onKey = null, closable = true, cls = "" } = {}) {
@@ -113,8 +113,6 @@ export function createUI(root) {
     h("div.hudbtns", {}, hudBtn("Bag", "I", () => ui.journal("items"), count), hudBtn("Craft", "K", () => ui.journal("craft")), hudBtn("Journal", "J", () => ui.journal("friends")), hudBtn("Menu", "Esc", () => ui.pause())),
     task,
   );
-  strip.addEventListener("pointerenter", () => (ui.pointerOnUi = true));
-  strip.addEventListener("pointerleave", () => (ui.pointerOnUi = false));
   root.append(strip);
   let hudKey = "";
   /** Refresh the strip when what it shows changes (called every frame). */
@@ -334,8 +332,6 @@ export function createUI(root) {
       );
     };
     draw();
-    bar.addEventListener("pointerenter", () => (ui.pointerOnUi = true));
-    bar.addEventListener("pointerleave", () => (ui.pointerOnUi = false));
     bar.refresh = draw;
     ui.buildBarEl = bar;
     root.append(bar);

@@ -123,3 +123,19 @@ test("fishing off the pier lands a gold fish and logs it", async ({ page }) => {
   expect(got.slot).toEqual({ id: fish, n: 1, q: 2 });
   expect(got.log).toEqual({ [fish]: { n: 1, best: 2 } });
 });
+
+test("mouse clicks still use tools after leaving build mode with its Done button", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForFunction(() => window.__game);
+  await page.evaluate(() => {
+    window.__game.newGame(undefined, { intro: false });
+    window.__game.openBuild("fence");
+  });
+  await page.locator(".buildbar").getByRole("button", { name: "Done" }).click();
+  await page.evaluate(() => {
+    window.__game.teleport(20, 24, "world", "right");
+    window.__game.selectItem("hoe");
+  });
+  await page.mouse.click(760, 400);
+  await expect.poll(() => page.evaluate(() => Object.keys(window.__game.state.soil).length)).toBe(1);
+});

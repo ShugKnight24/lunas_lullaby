@@ -98,7 +98,7 @@ export function updateBuild(g, dt) {
     b.valid = !!(o && o.kind === "structure");
   }
   if (input.mouse.rightClicked) return exitBuild(g);
-  if (!input.mouse.clicked || g.ui.pointerOnUi) return;
+  if (!input.mouse.clicked) return; // canvas clicks only: the DOM UI sits above it
   if (b.moving) {
     if (!b.valid) return toast(g, "Can't put it there.");
     const st = b.moving;
