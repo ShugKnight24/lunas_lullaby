@@ -8,7 +8,9 @@ test("a new game plays the intro, then the task card follows the first day", asy
   await page.evaluate(() => window.__game.newGame());
 
   // Rowan's letter, then Mira's welcome (six lines, E to advance past typing and each line).
-  await expect(page.locator(".letter")).toContainText("Dear Luna");
+  await expect(page.locator(".dream")).toContainText("stars are very close");
+  for (let i = 0; i < 6; i++) await page.locator(".dreambtn").click();
+  await expect(page.locator(".letter")).toContainText("Dear Sol");
   await page.getByRole("button", { name: "Fold the letter" }).click();
   await expect(page.locator(".dialogue")).toContainText("Mira");
   for (let i = 0; i < 12 && (await page.locator(".dialogue").count()); i++) await page.keyboard.press("KeyE");

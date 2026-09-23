@@ -8,6 +8,7 @@
 import { ITEMS } from "./data/items.js";
 import { TUTORIAL, TUTORIAL_REWARD } from "./data/tutorial.js";
 import { INTRO } from "./data/dialogue.js";
+import { PROLOGUE, FINALE } from "./data/dreams.js";
 import { fillLine } from "./rules/dialogue.js";
 import { gainXp, skillLevel, SKILL_NAMES, PROFESSIONS, pendingProfessions } from "./rules/skills.js";
 import { tutorialEvent } from "./rules/tutorial.js";
@@ -29,11 +30,13 @@ export function updateIntro(g, dt) {
   if (g.introT <= 0) playIntro(g);
 }
 
-/** Rowan's letter, then Mira walks up to say hello and heads back to town. */
+const storyVars = (s) => ({ name: s.profile.name, farm: s.profile.farm, pet: s.profile.pet.name });
+
+/** Your companion's dream, Rowan's letter, then Mira walks up to say hello and heads back to town. */
 function playIntro(g) {
   const s = g.s;
-  const vars = { name: s.profile.name, farm: s.profile.farm, pet: s.profile.pet.name };
-  g.ui.letter(INTRO.letter.map((l) => fillLine(l, vars)), () => {
+  const vars = storyVars(s);
+  g.ui.dream(PROLOGUE, vars, "Wake up", () => g.ui.letter(INTRO.letter.map((l) => fillLine(l, vars)), () => {
     const v = g.villagers.find((x) => x.id === "mira");
     Object.assign(v, { level: g.lv.id, x: g.player.x + 44, y: g.player.y + 4, dir: "left", path: null, hop: null, pause: 999 });
     g.player.dir = "right";
@@ -43,7 +46,13 @@ function playIntro(g) {
       s.flags.intro = true;
       g.tutFlash = 1.2;
     });
-  });
+  }));
+}
+
+/** Every wish came true: one last dream under the stars. */
+export function playFinale(g) {
+  g.s.flags.finale = true;
+  g.ui.dream(FINALE, storyVars(g.s), "Goodnight", () => toast(g, `${g.s.profile.pet.name} is right here. ♥`));
 }
 
 /** Offer a profession choice for any skill that reached level 5 without one. */

@@ -16,7 +16,7 @@ import { addItem } from "./rules/inventory.js";
 import { VILLAGER_IDS } from "./data/villagers.js";
 import { PLAYER_START, HORSE_START, FARM_WELL } from "./world/map.js";
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 /** `MIGRATIONS[n]` upgrades a v(n) save to v(n+1). */
 export const MIGRATIONS = {
@@ -35,6 +35,8 @@ export const MIGRATIONS = {
   4: (d) => ({ ...d, rel: { ...Object.fromEntries(VILLAGER_IDS.map((id) => [id, { ...newRel(), met: false }])), ...d.rel } }),
   // v6: professions chosen at skill level 5.
   5: (d) => ({ ...d, professions: {} }),
+  // v7: your companion's wishes, and harvest counts they're measured by.
+  6: (d) => ({ ...d, dreams: {}, stats: { harvested: {}, ...d.stats }, flags: { finale: false, ...d.flags } }),
 };
 
 /** Remove structures and soil on the farm well's paving, refunding what was built. */
@@ -60,10 +62,10 @@ export const migrateSave = migrateChain(SAVE_VERSION, MIGRATIONS);
 export const save = createSave("luna_save", SAVE_VERSION, migrateSave);
 
 export const DEFAULT_PROFILE = {
-  name: "Luna",
+  name: "Sol",
   farm: "Moonpetal Farm",
   look: { skin: 1, hair: "ponytail", hairColor: "#b0603a", eyes: "#3f6fb0", top: "#f4a6b8", bottom: "#5a6e9a", hat: "straw" },
-  pet: { kind: "dog", coat: "#d9a066", name: "Biscuit" },
+  pet: { kind: "dog", coat: "#d9a066", name: "Luna" },
 };
 
 export function newState(profile = DEFAULT_PROFILE, seed = 7) {
@@ -92,11 +94,12 @@ export function newState(profile = DEFAULT_PROFILE, seed = 7) {
     rel,
     pet: { happy: 40, petted: -1 },
     bin: [],
-    flags: { found: {}, intro: false },
+    flags: { found: {}, intro: false, finale: false },
+    dreams: {},
     skills: newSkills(),
     professions: {},
     tutorial: { step: 0, done: false },
-    stats: { earned: 0, shippedDays: 0 },
+    stats: { earned: 0, shippedDays: 0, harvested: {} },
     fishLog: {},
     uid: 1,
   };

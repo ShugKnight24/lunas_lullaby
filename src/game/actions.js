@@ -247,6 +247,7 @@ function reap(g, idx, tx, ty) {
   if (!h) return false;
   if (!give(g, h.item, h.qty, cx(tx), cy(ty), h.q)) return true;
   award(g, "farming", XP.harvest(ITEMS[h.item].sell) * h.qty);
+  g.s.stats.harvested[h.item] = (g.s.stats.harvested[h.item] ?? 0) + h.qty;
   g.s.soil[idx] = h.tile;
   syncSoil(g, idx);
   const d = g.cropDraw.get(idx);

@@ -1,6 +1,7 @@
 /**
  * DOM overlay panels: dialogue box, letter, shop, build menu + build bar,
- * journal (friends / bag / craft / fish / skills / farm), profession choice,
+ * journal (friends / bag / craft / fish / skills / wishes / farm), dream
+ * scenes, profession choice,
  * pause, confirm, name prompt and the end-of-day summary; plus the always-on HUD strip (Bag / Journal /
  * Menu buttons and the first-day task card). While any panel is open the game loop idles (`ui.isOpen()`);
  * panel keys are captured before the game's input sees them.
@@ -23,6 +24,9 @@ import { RECIPES } from "../data/recipes.js";
 import { craft, missing, unlocked } from "../rules/crafting.js";
 import { skipTutorial } from "../rules/tutorial.js";
 import { TUTORIAL } from "../data/tutorial.js";
+import { WISHES } from "../data/dreams.js";
+import { fillLine } from "../rules/dialogue.js";
+import { petSprite } from "../art/animals.js";
 import { iconSvg } from "../art/icons.js";
 import { qualityName } from "../rules/quality.js";
 import { portraitSvg } from "../art/person.js";
@@ -175,6 +179,31 @@ export function createUI(root) {
     show();
   };
 
+  // ── Dream scene: starry overlay, one line at a time ──
+  ui.dream = (lines, vars, last, onDone) => {
+    let i = 0;
+    const text = h("div.dreamline", { role: "status", "aria-live": "polite" });
+    const btn = h("button.btn.dreambtn");
+    const show = () => {
+      const l = lines[i];
+      text.replaceChildren(l.who === "pet" ? h("p.pet", {}, h("span.who", {}, vars.pet), fillLine(l.t, vars)) : h("p", {}, fillLine(l.t, vars)));
+      text.classList.remove("in");
+      void text.offsetWidth;
+      text.classList.add("in");
+      btn.textContent = i === lines.length - 1 ? last : "…";
+    };
+    const next = () => {
+      if (++i < lines.length) return show();
+      close();
+      onDone?.();
+    };
+    btn.onclick = next;
+    const box = h("div.dream", { onclick: (e) => e.target === btn || next() }, text, btn);
+    const wrap = open(box, { cls: "dreamy", closable: false, onKey: (e) => (["Enter", "Space", "KeyE"].includes(e.code) ? (next(), true) : false) });
+    wrap.prepend(h("div.dreammoon", { "aria-hidden": "true" }));
+    show();
+  };
+
   // ── Profession choice (level 5) ──
   ui.chooseProfession = (skillName, options, cb) => {
     const pick = (id) => (close(), cb(id));
@@ -321,7 +350,7 @@ export function createUI(root) {
     let pick = -1;
     const show = (t) => {
       tab = t;
-      tabs.replaceChildren(...[["friends", "Friends"], ["items", "Bag"], ["craft", "Craft"], ["fish", "Fish"], ["skills", "Skills"], ["farm", "Farm"]].map(([id, label]) => h(`button.tab${id === t ? ".on" : ""}`, { onclick: () => show(id) }, label)));
+      tabs.replaceChildren(...[["friends", "Friends"], ["items", "Bag"], ["craft", "Craft"], ["fish", "Fish"], ["skills", "Skills"], ["wishes", "Wishes"], ["farm", "Farm"]].map(([id, label]) => h(`button.tab${id === t ? ".on" : ""}`, { onclick: () => show(id) }, label)));
       if (t === "friends") {
         body.replaceChildren(
           ...VILLAGER_IDS.map((id) => {
@@ -365,6 +394,22 @@ export function createUI(root) {
           );
         draw();
         body.replaceChildren(grid, h("p.note", {}, "Click two slots to swap them. The top row is your hotbar (keys 1–9)."));
+      } else if (t === "wishes") {
+        const pet = g.s.profile.pet;
+        const vars = { pet: pet.name, name: g.s.profile.name };
+        const done = WISHES.filter((w) => g.s.dreams[w.id]).length;
+        body.replaceChildren(
+          h("div.wishhead", {}, h("div.wishpet", { html: toSvg(petSprite(pet.kind, pet.coat, 3), "pet") }), h("div", {}, h("b", {}, `${pet.name}'s wish`), h("p", {}, `${pet.name} wants to see you live the life you dreamed of. ${done} of ${WISHES.length} have come true.`))),
+          h(
+            "div.wishes",
+            {},
+            WISHES.map((w) =>
+              g.s.dreams[w.id]
+                ? h("div.wish.done", {}, h("b", {}, `✦ ${w.title}`), h("p", {}, fillLine(w.line, vars)))
+                : h("div.wish", {}, h("b", {}, `✧ ${w.title}`), h("small", {}, w.hint)),
+            ),
+          ),
+        );
       } else if (t === "craft") {
         const levels = Object.fromEntries(SKILLS.map((id) => [id, skillLevel(g.s.skills[id])]));
         const draw = () =>
@@ -508,6 +553,11 @@ export function createUI(root) {
       h("div.shipped", {}, lines),
       h("div.total", {}, h("span", {}, "Earned"), h("b", {}, `+${report.total}g`)),
       report.eggs ? h("p.note", {}, `Your hens laid ${report.eggs} egg${report.eggs > 1 ? "s" : ""}.`) : null,
+      ...(report.wishes ?? []).map((id) => {
+        const w = WISHES.find((x) => x.id === id);
+        return h("div.wishcard", {}, h("b", {}, `✦ ${s.profile.pet.name}'s wish came true: ${w.title}`), h("p", {}, fillLine(w.line, { pet: s.profile.pet.name, name: s.profile.name })));
+      }),
+      report.petDream ? h("p.note.petdream", {}, fillLine(report.petDream, { pet: s.profile.pet.name })) : null,
       report.seasonChanged ? h("p.season", {}, `${seasonName(c.season)} has arrived!${report.withered ? ` ${report.withered} out-of-season crop${report.withered > 1 ? "s" : ""} withered.` : ""}`) : null,
       h("p.note", {}, `${weekday(c)} ${c.day}, ${seasonName(c.season)} · ${wx}`),
       h("div.row", {}, h("button.btn.primary", { onclick: () => (close(), onContinue()) }, "Good morning!")),

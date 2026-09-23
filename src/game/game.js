@@ -23,6 +23,8 @@ import { ITEMS } from "./data/items.js";
 import { STRUCTURES } from "./data/structures.js";
 import { MACHINES } from "./data/machines.js";
 import { sellMult } from "./rules/skills.js";
+import { WISHES, PET_DREAMS } from "./data/dreams.js";
+import { newWishes, allWishes, petDream } from "./rules/dreams.js";
 import { FORAGE, RARE_FORAGE } from "./data/forage.js";
 import { VILLAGERS, VILLAGER_IDS } from "./data/villagers.js";
 import { useTool, interact, updateTarget, toggleMount } from "./actions.js";
@@ -30,7 +32,7 @@ import { updateBuild, exitBuild, fenceMasks } from "./build.js";
 import { updateFishing } from "./fishing.js";
 import { renderGame } from "./render.js";
 import { toast, updateHud, hotbarSlotAt } from "./ui/hud.js";
-import { queueIntro, updateIntro, updateProfessions } from "./progress.js";
+import { queueIntro, updateIntro, updateProfessions, playFinale } from "./progress.js";
 
 const WORLD_DATA = buildWorld(7);
 
@@ -243,6 +245,10 @@ export function sleep(g, passedOut = false) {
       const { state, report } = endDay(g.s, { crops: CROPS, items: ITEMS, w: g.levels.world.w, spots: g.spots, forage: FORAGE, rareForage: RARE_FORAGE, passedOut, mult: (id) => sellMult(g.s.professions, id, ITEMS[id]) });
       g.s = state;
       g.s.stats.earned += report.total;
+      // Your companion's wishes that came true today, and what they dreamed.
+      report.wishes = newWishes(g.s, WISHES);
+      for (const id of report.wishes) g.s.dreams = { ...g.s.dreams, [id]: true };
+      report.petDream = petDream(dayIndex(g.s.clock), g.s.pet.happy, PET_DREAMS);
       regrowWorld(g);
       for (const o of g.levels.world.objects) if (o.kind === "structure" && MACHINES[o.type]) {
         o.busy = !!g.s.structures.find((st) => st.uid === o.uid)?.input;
@@ -267,6 +273,7 @@ export function sleep(g, passedOut = false) {
         g.mode = "play";
         fadeIn(g, 2);
         if (report.seasonChanged) toast(g, `A new season begins!`);
+        if (allWishes(g.s.dreams, WISHES) && !g.s.flags.finale) playFinale(g);
       });
     },
     passedOut ? 1.2 : 1.6,

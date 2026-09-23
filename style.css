@@ -114,6 +114,39 @@ input.text:focus { box-shadow: 0 0 0 4px var(--rose-soft); }
 .profopt b { font: 700 18px var(--display); }
 .profopt:hover, .profopt:focus-visible { background: #fff; outline: 3px solid var(--rose); outline-offset: 2px; }
 
+/* ── Dreams (prologue / finale) ── */
+.overlay.dreamy {
+  background:
+    radial-gradient(2px 2px at 12% 18%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 28% 72%, #fff 50%, transparent 51%),
+    radial-gradient(2px 2px at 44% 30%, #fff8d8 50%, transparent 51%), radial-gradient(2px 2px at 63% 12%, #fff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 78% 58%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 88% 26%, #fff 50%, transparent 51%),
+    radial-gradient(2px 2px at 20% 88%, #fff8d8 50%, transparent 51%), radial-gradient(2px 2px at 92% 84%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 6% 52%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 52% 90%, #fff 50%, transparent 51%),
+    linear-gradient(#141a3a, #2a2350 60%, #3a2a4a);
+}
+.dream { display: grid; justify-items: center; gap: 22px; max-width: min(620px, 90vw); text-align: center; cursor: pointer; }
+.dreamline p { margin: 0; font: 500 22px/1.5 var(--display); color: #f4ecff; text-shadow: 0 2px 8px rgba(0,0,0,.4); }
+.dreamline p.pet { font-style: italic; color: #fff4c8; }
+.dreamline .who { display: block; font-style: normal; font-size: 14px; letter-spacing: .12em; text-transform: uppercase; color: #f6d86a; margin-bottom: 6px; }
+.dreamline.in { animation: dreamIn .9s ease both; }
+@keyframes dreamIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .dreamline.in { animation: none; } }
+.dream .dreambtn { background: rgba(255,255,255,.1); color: #f4ecff; border-color: #f4ecff; box-shadow: 0 4px 0 rgba(0,0,0,.35); min-width: 96px; }
+.dream .dreambtn:hover, .dream .dreambtn:focus-visible { background: rgba(255,255,255,.22); color: #fff; }
+.dreammoon { position: absolute; top: 12%; right: 18%; width: 64px; height: 64px; border-radius: 50%; box-shadow: 16px -8px 0 0 #fff2c0; filter: drop-shadow(0 0 18px rgba(255,236,170,.55)); pointer-events: none; }
+.wishhead { display: flex; gap: 14px; align-items: center; margin-bottom: 12px; }
+.wishhead p { margin: 4px 0 0; }
+.wishpet svg { width: 72px; height: 72px; }
+.wishes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.wish { background: #f3e6d6; border: 2px dashed rgba(58,37,48,.25); border-radius: 14px; padding: 8px 12px; display: grid; gap: 2px; }
+.wish small { color: rgba(58,37,48,.65); }
+.wish.done { background: #fdf3d8; border: 2px solid #e8c86a; }
+.wish.done p { margin: 0; font-size: 14px; font-style: italic; }
+.wishcard { background: #fdf3d8; border: 2px solid #e8c86a; border-radius: 14px; padding: 8px 12px; margin: 8px 0; text-align: left; }
+.wishcard p { margin: 4px 0 0; font-style: italic; }
+.petdream { font-style: italic; }
+.dedication { margin: 14px 0 0; text-align: center; font: 600 14px var(--display); color: var(--cream); opacity: .85; text-shadow: 0 2px 0 var(--ink); }
+@media (max-width: 640px) { .wishes { grid-template-columns: 1fr; } }
+
 /* ── Dialogue ── */
 .dialogue {
   display: flex; gap: 16px; align-items: stretch; width: min(760px, 94vw);
@@ -167,7 +200,7 @@ input.text:focus { box-shadow: 0 0 0 4px var(--rose-soft); }
 .buildbar .btn { padding: 5px 12px; font-size: 14px; }
 
 /* ── Journal ── */
-.tabs { display: flex; gap: 6px; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .tab { font: 600 15px var(--display); padding: 6px 14px; border: 2.5px solid var(--ink); border-radius: 12px; background: #fff; }
 .tab.on { background: var(--rose); color: #fff; }
 .jbody { min-height: 300px; margin-top: 8px; }

@@ -1,16 +1,17 @@
 /**
- * Animal sprites: pet dog / cat / bird, the horse and coop chickens.
+ * Animal sprites: pet dog / cat / bird / chainsaw pup, the horse and coop chickens.
  * Side views face right (left is drawn flipped), feet at y = 0. Tails and
  * wings are their own layers so they can wag/flutter as canvas transforms.
  */
 
 import { part, limb, oval, circle, hi, fill, line, ellD, rrD, capD, polyD, outlined, sprite, lite, dark, INK } from "./cozy-kit.js";
 
-export const PET_KINDS = ["dog", "cat", "bird"];
+export const PET_KINDS = ["dog", "cat", "bird", "pochita"];
 export const PET_COATS = {
   dog: ["#d9a066", "#f1e4d4", "#7a5040"],
   cat: ["#f0a050", "#7a7a8a", "#f6f0e8"],
   bird: ["#7cc0e8", "#f6d04a", "#f39ab0"],
+  pochita: ["#f08a3a", "#f6a25a", "#e0703a"],
 };
 
 const eye = (x, y, r = 1.4) => fill(ellD(x, y, r, r * 1.2), INK) + fill(ellD(x + r * 0.35, y - r * 0.45, r * 0.4, r * 0.4), "#fff");
@@ -98,7 +99,32 @@ function bird(c, frame) {
   return sprite([-16, -26, 30, 29], [L(m), wing]);
 }
 
+// ── Chainsaw pup ────────────────────────────────────────────────────────────
+
+/** Round little devil-dog: a chainsaw bar on the forehead and a pull-cord tail. */
+function pochita(c, frame) {
+  const sw = frame === 1 ? 2.5 : frame === 2 ? -2.5 : 0;
+  const d = dark(c, 0.22);
+  const sit = frame === 3;
+  const hy = sit ? -3 : 0;
+  // Pull-cord tail with a T grip; it swings as he trots.
+  const cord = sit ? "M-10 -5Q-16 -4 -18 -8" : "M-10 -11Q-17 -12 -19 -18";
+  const [gx, gy] = sit ? [-18, -8] : [-19, -18];
+  const tail = L(line(cord, 2.4, INK) + line(cord, 1.2, "#e8e0d0") + part(rrD(gx - 3.5, gy - 1.6, 7, 3.2, 1.4), "#3a3a44", { s: 0.4, w: 1.1 }), sit ? {} : { anim: { type: "sway", pivot: [-10, -11], amp: 0.3, speed: 9 } });
+  let m = "";
+  if (!sit) m += limb([-6, -6], [-6 - sw, -0.5], 3.6, 3.4, d, { s: 0.8 }) + limb([5, -6], [5 + sw, -0.5], 3.6, 3.4, d, { s: 0.8 });
+  m += oval(-1, -9 + (sit ? 1 : 0), 11, sit ? 8.5 : 7.6, c) + hi(-5, -13, 3.4, 1.3, 0.4);
+  m += sit ? oval(-5, -0.8, 3, 1.8, d, { s: 0.6 }) + oval(5, -0.8, 3, 1.8, d, { s: 0.6 }) : limb([-3, -6], [-3 + sw, -0.5], 3.8, 3.6, c, { s: 0.8 }) + limb([7.5, -6], [7.5 - sw, -0.5], 3.8, 3.6, c, { s: 0.8 });
+  // Head, with the saw bar angled up and forward from the brow.
+  m += circle(8.5, -15 + hy, 7.4, c) + hi(5.5, -18.5 + hy, 2.3, 1.2, 0.5);
+  m += `<g transform="rotate(-28 9 ${-22 + hy})">` + part(rrD(9, -24.5 + hy, 13, 5, 2.5), "#c8ccd4", { s: 0.8 }) + line(`M11 ${-24.5 + hy}h1.6m1.6 0h1.6m1.6 0h1.6m1.6 0h1.6`, 1.3, INK, 0.9) + part(rrD(5, -25.5 + hy, 6, 7, 1.8), "#7a7e8a", { s: 0.6, w: 1.2 }) + `</g>`;
+  m += eye(11, -15.5 + hy, 1.5);
+  m += oval(14.5, -11.5 + hy, 1.6, 2.4, "#f27a8a", { s: 0.5, w: 1 });
+  return sprite([-24, -36, 50, 40], [tail, L(m)]);
+}
+
 export function petSprite(kind, coat, frame) {
+  if (kind === "pochita") return pochita(coat, frame);
   if (kind === "cat") return cat(coat, frame);
   if (kind === "bird") return bird(coat, frame);
   return dog(coat, frame);
