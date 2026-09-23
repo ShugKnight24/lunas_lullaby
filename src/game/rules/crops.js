@@ -1,10 +1,12 @@
 /**
- * Soil and crop rules on plain tile records `{ watered, crop }` where
- * `crop = { id, days, dead }`. Every function returns a new tile (or a
- * result object) and never mutates its input.
+ * Soil and crop rules on plain tile records `{ watered, crop, fert? }` where
+ * `crop = { id, days, dead, missed? }` (missed counts dry days while growing)
+ * and `fert` is the fertilizer tier worked into the soil. Every function
+ * returns a new tile (or a result object) and never mutates its input.
  */
 
 import { SEASONS } from "../config.js";
+import { rollQuality, cropOdds } from "./quality.js";
 
 const inSeason = (def, season) => def.seasons.includes(SEASONS[season]);
 
@@ -41,12 +43,21 @@ export function plant(tile, def, id, season) {
 
 export const water = (tile) => (tile.watered ? tile : { ...tile, watered: true });
 
-/** Overnight growth: watered, living crops advance one day. */
+/** Overnight growth: watered, living crops advance one day; dry ones remember it. */
 export function grow(tile, def) {
-  if (!tile.crop || tile.crop.dead || !tile.watered) return tile;
+  if (!tile.crop || tile.crop.dead) return tile;
   const max = totalDays(def);
   if (tile.crop.days >= max) return tile;
+  if (!tile.watered) return { ...tile, crop: { ...tile.crop, missed: (tile.crop.missed ?? 0) + 1 } };
   return { ...tile, crop: { ...tile.crop, days: tile.crop.days + 1 } };
+}
+
+/** Work fertilizer of `tier` into tilled soil, before the seeds sprout. */
+export function fertilize(tile, tier) {
+  if (!tile) return { error: "Till the soil first." };
+  if (tile.crop && tile.crop.days > 0) return { error: "Too late — fertilize before the seeds sprout." };
+  if ((tile.fert ?? 0) >= tier) return { error: "This soil is already fertilized." };
+  return { tile: { ...tile, fert: tier } };
 }
 
 /** Morning reset: soil dries unless rain or a sprinkler waters it. */
@@ -58,11 +69,16 @@ export function seasonChange(tile, def, season) {
   return { ...tile, crop: { ...tile.crop, dead: true } };
 }
 
-/** Harvest a ripe crop: `{ tile, item, qty }` or null when not ripe. */
-export function harvest(tile, def) {
+/**
+ * Harvest a ripe crop: `{ tile, item, qty, q }` or null when not ripe. `r`
+ * rolls the quality from the soil's fertilizer, whether it never went dry
+ * and the farming skill `bonus`.
+ */
+export function harvest(tile, def, r = 1, bonus = [0, 0]) {
   if (!tile.crop || !isRipe(tile.crop, def)) return null;
-  const crop = def.regrow ? { ...tile.crop, days: totalDays(def) - def.regrow } : null;
-  return { tile: { ...tile, crop }, item: def.produce, qty: def.yield };
+  const q = rollQuality(cropOdds(tile.fert ?? 0, !tile.crop.missed, bonus), r);
+  const crop = def.regrow ? { id: tile.crop.id, days: totalDays(def) - def.regrow, dead: false } : null;
+  return { tile: { ...tile, crop }, item: def.produce, qty: def.yield, q };
 }
 
 /** Clear a dead crop with the scythe or hoe. */

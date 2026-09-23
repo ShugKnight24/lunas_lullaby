@@ -1,5 +1,6 @@
 /**
- * Inventory as a fixed array of slots, each `null` or `{ id, n }`. These
+ * Inventory as a fixed array of slots, each `null` or `{ id, n, q? }` (q is
+ * the item quality, omitted when normal; stacks only merge within a quality). These
  * mutate the slot array in place (it is the save's own array) and return
  * how much could not be moved.
  */
@@ -9,12 +10,12 @@ import { ITEMS } from "../data/items.js";
 
 const stackable = (id) => ITEMS[id]?.kind !== "tool";
 
-/** Add n of id, filling existing stacks first. Returns the leftover count. */
-export function addItem(inv, id, n = 1) {
+/** Add n of id at quality q, filling existing stacks first. Returns the leftover count. */
+export function addItem(inv, id, n = 1, q = 0) {
   if (stackable(id)) {
     for (let i = 0; i < inv.length && n > 0; i++) {
       const s = inv[i];
-      if (s && s.id === id && s.n < MAX_STACK) {
+      if (s && s.id === id && (s.q ?? 0) === q && s.n < MAX_STACK) {
         const k = Math.min(n, MAX_STACK - s.n);
         s.n += k;
         n -= k;
@@ -24,7 +25,7 @@ export function addItem(inv, id, n = 1) {
   for (let i = 0; i < inv.length && n > 0; i++) {
     if (!inv[i]) {
       const k = stackable(id) ? Math.min(n, MAX_STACK) : 1;
-      inv[i] = { id, n: k };
+      inv[i] = q ? { id, n: k, q } : { id, n: k };
       n -= k;
     }
   }

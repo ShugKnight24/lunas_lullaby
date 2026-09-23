@@ -7,7 +7,11 @@
 
 import { TILE } from "./config.js";
 import { STRUCTURES } from "./data/structures.js";
-import { canPlace, affordable, refund } from "./rules/structures.js";
+import { canPlace, affordable, refund, buildCost } from "./rules/structures.js";
+import { skillLevel, has, XP, DIY_LEVEL } from "./rules/skills.js";
+import { award } from "./progress.js";
+import { sfx } from "./audio/sfx.js";
+import { newCoop } from "./rules/animals.js";
 import { countItem, removeItem, addItem } from "./rules/inventory.js";
 import { GR, inFarm, FARM } from "./world/map.js";
 import { snapCamera, updateCamera } from "./world/camera.js";
@@ -18,14 +22,23 @@ import { toast } from "./ui/hud.js";
 
 const world = (g) => g.levels.world;
 
-const WALLET = { gold: 0, wood: 0, stone: 0 };
+const WALLET = { gold: 0, wood: 0, stone: 0, fiber: 0 };
 /** What the player can spend (one reused object). */
 export function wallet(g) {
   WALLET.gold = g.s.gold;
   WALLET.wood = countItem(g.s.inv, "wood");
   WALLET.stone = countItem(g.s.inv, "stone");
+  WALLET.fiber = countItem(g.s.inv, "fiber");
   return WALLET;
 }
+
+export const buildingLevel = (g) => skillLevel(g.s.skills.building ?? 0);
+
+/** A structure's cost for this player (Building level and profession applied). */
+export const costOf = (g, type) => buildCost(STRUCTURES[type].cost, buildingLevel(g), { carpenter: has(g.s.professions, "carpenter"), diyLevel: DIY_LEVEL });
+
+/** Unlocked at the player's Building level? */
+export const canBuild = (g, type) => buildingLevel(g) >= (STRUCTURES[type].level ?? 0);
 
 /** Placement queries for rules/structures.canPlace (built once per game). */
 export function placementQuery(g) {
@@ -37,7 +50,7 @@ export function placementQuery(g) {
       const pty = Math.floor(g.player.y / TILE);
       if (!inFarm(x, y)) return false;
       const gr = lv.ground[y * lv.w + x];
-      if (gr !== GR.GRASS && gr !== GR.FIELD && gr !== GR.SAND) return false;
+      if (gr !== GR.GRASS && gr !== GR.FIELD && gr !== GR.SAND && gr !== GR.FOREST) return false;
       if (lv.doors.has(y * lv.w + x)) return false;
       const plv = g.mode === "build" ? g.build.prevLevel : g.lv;
       return !(plv === lv && x === ptx && y === pty);
@@ -91,13 +104,13 @@ export function updateBuild(g, dt) {
   const def = STRUCTURES[type];
   hoverTile(g, b.mode === "place" || b.moving ? def : { w: 1, h: 1 });
   if (b.mode === "place" || b.moving) {
-    b.valid = canPlace(def, b.tx, b.ty, placementQuery(g)) && (b.moving || affordable(def.cost, wallet(g)));
+    b.valid = canPlace(def, b.tx, b.ty, placementQuery(g)) && (b.moving || affordable(costOf(g, type), wallet(g)));
   } else {
     const o = lv.at(b.tx, b.ty);
     b.valid = !!(o && o.kind === "structure");
   }
   if (input.mouse.rightClicked) return exitBuild(g);
-  if (!input.mouse.clicked || g.ui.pointerOnUi) return;
+  if (!input.mouse.clicked) return; // canvas clicks only: the DOM UI sits above it
   if (b.moving) {
     if (!b.valid) return toast(g, "Can't put it there.");
     const st = b.moving;
@@ -128,23 +141,31 @@ export function placeStructure(g, type, tx, ty) {
     toast(g, "Can't build there.");
     return false;
   }
-  if (!affordable(def.cost, wallet(g))) {
+  if (!canBuild(g, type)) {
+    toast(g, `Learn it at Building level ${def.level}.`);
+    return false;
+  }
+  const cost = costOf(g, type);
+  if (!affordable(cost, wallet(g))) {
     toast(g, "Not enough materials.");
     return false;
   }
-  g.s.gold -= def.cost.gold ?? 0;
-  if (def.cost.wood) removeItem(g.s.inv, "wood", def.cost.wood);
-  if (def.cost.stone) removeItem(g.s.inv, "stone", def.cost.stone);
+  g.s.gold -= cost.gold ?? 0;
+  for (const k in cost) if (k !== "gold") removeItem(g.s.inv, k, cost[k]);
   const lv = world(g);
   for (let y = 0; y < def.h; y++) for (let x = 0; x < def.w; x++) {
     const o = lv.at(tx + x, ty + y);
     if (o && o.kind === "flowers") (o.gone = true), lv.index(o, null);
   }
   const st = { uid: g.s.uid++, type, tx, ty };
+  if (type === "coop") Object.assign(st, newCoop(st.uid));
+  if (def.paint && g.build.color) st.color = g.build.color;
   g.s.structures.push(st);
   const o = addStructureObject(g, st);
   fenceMasks(g);
   burst(FXK.DUST, o.x, o.y, 10, 60, 0.6, "rgba(200,170,130,0.8)");
+  sfx(g, "build");
+  award(g, "building", XP.build(def.cost));
   return true;
 }
 
@@ -159,6 +180,11 @@ export function removeStructure(g, o, refundIt) {
   if (refundIt) {
     const r = refund(STRUCTURES[st.type].cost);
     for (const k in r) if (r[k]) addItem(g.s.inv, k, r[k]);
+    if (st.eggs) st.eggs.forEach((n, q) => n && addItem(g.s.inv, "egg", n, q));
+    const def = STRUCTURES[st.type];
+    if (def.item) addItem(g.s.inv, def.item);
+    if (st.input) addItem(g.s.inv, st.input, 1, st.q);
+    if (st.out) addItem(g.s.inv, st.out, 1, st.q);
   }
   fenceMasks(g);
   return st;
@@ -175,12 +201,11 @@ function placeBack(g) {
 /** Recompute fence connection masks (fixed fences and built ones). */
 export function fenceMasks(g) {
   const lv = world(g);
-  const isFence = (x, y) => {
-    const o = lv.at(x, y);
-    return !!(o && !o.gone && (o.kind === "fence" || (o.kind === "structure" && o.type === "fence")));
-  };
+  // Every fence style (and gates) joins up with the others and the farm's own fences.
+  const fencey = (o) => !!(o && !o.gone && (o.kind === "fence" || (o.kind === "structure" && STRUCTURES[o.type]?.fence)));
+  const isFence = (x, y) => fencey(lv.at(x, y));
   for (const o of lv.objects) {
-    if (!(o.kind === "fence" || (o.kind === "structure" && o.type === "fence"))) continue;
+    if (!fencey(o)) continue;
     const m = (isFence(o.tx - 1, o.ty) ? 1 : 0) | (isFence(o.tx + 1, o.ty) ? 2 : 0) | (isFence(o.tx, o.ty - 1) ? 4 : 0) | (isFence(o.tx, o.ty + 1) ? 8 : 0);
     if (m !== o.mask || !o.spr) {
       o.mask = m;

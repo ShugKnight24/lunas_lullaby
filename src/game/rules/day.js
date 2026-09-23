@@ -1,7 +1,7 @@
 /**
  * End-of-day rollover on a plain save state: ship the bin, grow crops,
  * advance the calendar, wither out-of-season crops, roll weather, water by
- * rain and sprinklers, respawn forage and restore energy. Pure: returns a
+ * rain and sprinklers, feed coops, run machines, respawn forage and restore energy. Pure: returns a
  * new state plus a report for the summary card.
  */
 
@@ -11,12 +11,15 @@ import { grow, seasonChange, morning } from "./crops.js";
 import { nextDay, dayIndex } from "./clock.js";
 import { rollWeather } from "./weather.js";
 import { sprinklerTiles } from "./structures.js";
+import { coopMorning } from "./animals.js";
+import { machineMorning } from "./machines.js";
+import { MACHINES } from "../data/machines.js";
 
 /** Tile indices watered this morning by sprinklers. */
 export function sprinklerCoverage(structures, w) {
   const wet = new Set();
   for (const s of structures) {
-    if (s.kind !== "sprinkler") continue;
+    if (s.type !== "sprinkler") continue;
     for (const [x, y] of sprinklerTiles(s.tx, s.ty)) wet.add(y * w + x);
   }
   return wet;
@@ -48,7 +51,7 @@ export function respawnForage(forage, spots, day, season, table, rareTable) {
  * @param {{ crops, items, w, spots, forage, rareForage, passedOut? }} o
  */
 export function endDay(s, o) {
-  const { total, lines } = settle(s.bin, o.items);
+  const { total, lines } = settle(s.bin, o.items, o.mult);
   let gold = s.gold + total;
   const { clock, seasonChanged } = nextDay(s.clock);
   const weather = rollWeather(dayIndex(clock), clock.season, s.seed);
@@ -71,6 +74,15 @@ export function endDay(s, o) {
     penalty = Math.min(1000, Math.floor(gold * 0.1));
     gold -= penalty;
   }
+  let eggs = 0;
+  const today = dayIndex(s.clock);
+  const structures = s.structures.map((st) => {
+    if (MACHINES[st.type]) return machineMorning(st, MACHINES[st.type]);
+    if (st.type !== "coop") return st;
+    const r = coopMorning(st, today, (i) => hash(st.uid * 8 + i, today));
+    eggs += r.laid;
+    return r.st;
+  });
   const forage = respawnForage(s.forage, o.spots, dayIndex(clock), clock.season, o.forage, o.rareForage);
   return {
     state: {
@@ -79,10 +91,11 @@ export function endDay(s, o) {
       clock,
       weather,
       soil,
+      structures,
       forage,
       bin: [],
       energy: o.passedOut ? Math.floor(MAX_ENERGY / 2) : MAX_ENERGY,
     },
-    report: { total, lines, seasonChanged, withered, weather, penalty, passedOut: !!o.passedOut },
+    report: { total, lines, seasonChanged, withered, weather, penalty, eggs, passedOut: !!o.passedOut },
   };
 }

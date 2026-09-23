@@ -16,12 +16,15 @@ import { drawWeather, drawFx } from "./world/weather.js";
 import { drawPlayer, drawPet, drawHorse, drawVillager, drawChicken } from "./actors/actors.js";
 import { smoothMinute } from "./game.js";
 import { drawHud } from "./ui/hud.js";
+import { placementQuery } from "./build.js";
 
 const OPT = { alpha: 1, flip: false, cap: 512 };
 const list = [];
 const byY = (a, b) => a.y - b.y;
+/** Fertilizer fleck positions within a soil tile (art units). */
+const FLECKS = [[7, 9], [20, 6], [13, 17], [24, 21], [6, 24]];
 const WEATHER = ["petals", null, "leaves", null];
-const ghostObj = { kind: "structure", type: "", mask: 0, key: "", spr: null };
+const ghostObj = { kind: "structure", type: "", mask: 0, color: null, key: "", spr: null };
 let VW = 0;
 let VH = 0;
 let lastT = 0;
@@ -108,6 +111,12 @@ export function renderGame(ctx, view, g, t) {
       if (d.tx < tx0 || d.tx > tx1 || d.ty < ty0 || d.ty > ty1) continue;
       const wet = g.s.soil[d.idx].watered;
       blit(ctx, wet ? "soil:1" : "soil:0", soilSpr(wet), ox + d.tx * T, oy + d.ty * T, z, t);
+      const fert = g.s.soil[d.idx].fert;
+      if (fert) {
+        // Fertilizer flecks: violet for basic, gold for deluxe.
+        ctx.fillStyle = fert === 2 ? "rgba(246,198,60,0.85)" : "rgba(160,120,210,0.8)";
+        for (const [fx, fy] of FLECKS) ctx.fillRect(ox + (d.tx * TILE + fx) * z, oy + (d.ty * TILE + fy) * z, 2.5 * z, 2.5 * z);
+      }
     }
   }
   for (const o of lv.objects) {
@@ -257,7 +266,7 @@ function drawGlows(ctx, g, lv, ox, oy, z, t, dark) {
     let x = 0;
     let y = 0;
     let r = 0;
-    if (o.kind === "lamp") {
+    if (o.kind === "lamp" || (o.kind === "structure" && o.type === "lamp")) {
       x = o.x;
       y = o.y - 52;
       r = 90;
@@ -302,6 +311,14 @@ function drawGhost(ctx, g, ox, oy, z, t) {
     ctx.fillRect(ox + b.tx * T, oy + b.ty * T, T, T);
     return;
   }
+  // Where you can build: a soft tint on every open farm tile in view.
+  const q = placementQuery(g);
+  const vx0 = Math.max(0, Math.floor(-ox / T));
+  const vy0 = Math.max(0, Math.floor(-oy / T));
+  const vx1 = Math.min(g.lv.w - 1, Math.ceil((g.view.w - ox) / T));
+  const vy1 = Math.min(g.lv.h - 1, Math.ceil((g.view.h - oy) / T));
+  ctx.fillStyle = "rgba(255,250,220,0.16)";
+  for (let y = vy0; y <= vy1; y++) for (let x = vx0; x <= vx1; x++) if (q.buildable(x, y) && !q.blocked(x, y)) ctx.fillRect(ox + x * T + 1, oy + y * T + 1, T - 2, T - 2);
   const type = b.moving ? b.moving.type : b.type;
   const def = STRUCTURES[type];
   ctx.fillStyle = b.valid ? "rgba(120,220,140,0.35)" : "rgba(240,90,110,0.4)";
@@ -313,8 +330,10 @@ function drawGhost(ctx, g, ox, oy, z, t) {
     ctx.fill();
     ctx.stroke();
   }
-  if (ghostObj.type !== type) {
+  const color = b.moving ? b.moving.color ?? null : def.paint ? b.color ?? null : null;
+  if (ghostObj.type !== type || ghostObj.color !== color) {
     ghostObj.type = type;
+    ghostObj.color = color;
     ghostObj.mask = 3;
     resolveObject(ghostObj, g.s.clock.season);
   }

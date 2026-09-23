@@ -1,16 +1,19 @@
 /**
- * Animal sprites: pet dog / cat / bird, the horse and coop chickens.
+ * Animal sprites: pet dogs (Anatolian shepherd, drawn from Luna herself, and a
+ * small dog) / cat / bird / Sawyer the chainsaw pup, the horse and coop chickens.
  * Side views face right (left is drawn flipped), feet at y = 0. Tails and
  * wings are their own layers so they can wag/flutter as canvas transforms.
  */
 
 import { part, limb, oval, circle, hi, fill, line, ellD, rrD, capD, polyD, outlined, sprite, lite, dark, INK } from "./cozy-kit.js";
 
-export const PET_KINDS = ["dog", "cat", "bird"];
+export const PET_KINDS = ["anatolian", "dog", "cat", "bird", "sawpup"];
 export const PET_COATS = {
+  anatolian: ["#c8965a", "#e2c89c", "#9a6e4a"],
   dog: ["#d9a066", "#f1e4d4", "#7a5040"],
   cat: ["#f0a050", "#7a7a8a", "#f6f0e8"],
   bird: ["#7cc0e8", "#f6d04a", "#f39ab0"],
+  sawpup: ["#f08a3a", "#f6a25a", "#e0703a"],
 };
 
 const eye = (x, y, r = 1.4) => fill(ellD(x, y, r, r * 1.2), INK) + fill(ellD(x + r * 0.35, y - r * 0.45, r * 0.4, r * 0.4), "#fff");
@@ -47,6 +50,57 @@ function dog(c, frame) {
   m += eye(11.5 + hx, -20.5 + hy);
   m += part(`M${4 + hx} ${-24 + hy}C${1 + hx} ${-23 + hy} ${0 + hx} ${-16 + hy} ${3 + hx} ${-13.5 + hy}C${5.5 + hx} ${-14 + hy} ${7 + hx} ${-19 + hy} ${8 + hx} ${-23 + hy}Z`, d, { s: 1 });
   return sprite([-26, -34, 50, 38], [tail, L(m)]);
+}
+
+// ── Anatolian shepherd (Luna) ───────────────────────────────────────────────
+
+const WHITE = "#f4ece0";
+const MASK = "#4a3228";
+
+/**
+ * Tall, deep-chested shepherd: fawn coat, white chest, socks and tail tip, a
+ * dark mask around soft eyes, a grey-dusted muzzle, and ears that stand out
+ * sideways and fold over with dark tips.
+ */
+function anatolian(c, frame) {
+  const sw = frame === 1 ? 4 : frame === 2 ? -4 : 0;
+  const d = dark(c, 0.18);
+  const sit = frame === 3;
+  const tailD = sit ? "M-13 -6Q-22 -4 -24 -10" : "M-14 -17Q-25 -18 -22 -29";
+  const tip = sit ? [-24, -10] : [-22, -29];
+  const tail = L(line(tailD, 6.4, INK) + line(tailD, 4.2, c) + circle(tip[0], tip[1], 2.6, WHITE, { s: 0.6, w: 1.2 }), sit ? {} : { anim: { type: "sway", pivot: [-14, -17], amp: 0.22, speed: 7 } });
+  let m = "";
+  const leg = (x0, y0, x1, col, sock) => limb([x0, y0], [x1, -0.5], 4.4, 4, col, { s: 1 }) + oval(x1 + 0.8, -0.8, 3, 1.9, sock, { s: 0.8 });
+  if (sit) {
+    m += leg(8, -16, 8.5, WHITE, WHITE);
+    m += `<g transform="rotate(-34 -3 -12)">${oval(-3, -12, 12.5, 8, c)}</g>`;
+    m += circle(-8, -6, 6.5, c) + oval(-4, -1, 3.6, 2.2, WHITE, { s: 0.8 });
+    m += fill(ellD(6, -14, 5, 7), WHITE) + leg(11, -16, 11.5, WHITE, WHITE);
+  } else {
+    m += leg(-10, -12, -10 - sw, d, WHITE) + leg(7, -12, 7 + sw, WHITE, WHITE);
+    m += oval(-2, -14.5, 14, 7.8, c) + fill(ellD(4, -10.5, 8.5, 3.6), WHITE) + hi(-8, -19, 4.5, 1.4, 0.35);
+    m += leg(-6, -12, -6 + sw, c, WHITE) + leg(10.5, -12, 10.5 - sw, WHITE, WHITE);
+  }
+  // Neck and throat (unoutlined fills over the body, so there's no seam).
+  const [hx, hy] = sit ? [-2, -6] : [0, 0];
+  m += `<g transform="translate(${hx} ${hy})">`;
+  m += fill("M3 -19L6 -28L13 -26L12 -14Z", c) + fill(ellD(10.5, -19, 3.2, 5), WHITE, 0.95);
+  // One blocky profile: broad skull, gentle stop, long straight muzzle.
+  m += part("M5 -30C5 -35.5 11 -37 15 -35C17 -34 18 -32 19.5 -31.2L26.5 -30C29.3 -29.5 29.7 -25 27.2 -24L18 -21.8C14 -21 9 -21.4 6.5 -24C4.8 -25.8 4.8 -28 5 -30Z", c, { s: 1.4 });
+  m += hi(9, -33.5, 3, 1.2, 0.4);
+  // Grey-white lower muzzle and chin, a dark stripe down the top, a big black nose.
+  m += fill("M17.5 -27L27.6 -27.8C29.2 -26.3 28.7 -24.4 27.2 -24L18 -21.8C16 -22 15.4 -25.2 17.5 -27Z", "#e4ddd4");
+  m += fill("M16.5 -31.6L26.5 -30L26.8 -28.6L17.2 -29.4Z", MASK, 0.5);
+  m += fill(ellD(27.9, -27.9, 2, 1.7), INK) + fill(ellD(27.4, -28.6, 0.7, 0.4), "#fff", 0.5);
+  m += line("M19 -23.2Q22.5 -22.6 26 -24", 0.9, dark("#e4ddd4", 0.45));
+  // The mask: dark around a soft, heavy-lidded eye with a pink lower lid; darker brow.
+  m += fill(ellD(15.2, -30, 3.2, 2.4), MASK, 0.85) + fill(ellD(13.4, -32.8, 2.6, 0.9), MASK, 0.55);
+  m += eye(15.5, -30.1, 1.4) + line("M13.6 -31.4Q15.5 -32.2 17.3 -31.4", 1, MASK) + line("M14 -28.5Q15.5 -27.9 17 -28.5", 0.8, "#e88a9a");
+  // Ear: stands out from the top of the skull, then the tip folds down — dark along the edge.
+  m += part("M9.5 -34.6C6.5 -38 1 -38.2 -1.5 -35C-2.8 -33 -2 -30.2 -0.2 -29.4C1.2 -31.4 4 -32.8 8.6 -31.8Z", c, { s: 1 });
+  m += fill("M-1.5 -35C-2.8 -33 -2 -30.2 -0.2 -29.4C0.4 -30.4 0.6 -31.8 0 -33.4Z", MASK, 0.75) + fill(ellD(4.2, -34.3, 2.6, 0.9), "#e8b8a8", 0.5);
+  m += "</g>";
+  return sprite([-30, -44, 60, 48], [tail, L(m)]);
 }
 
 // ── Cat ─────────────────────────────────────────────────────────────────────
@@ -98,7 +152,44 @@ function bird(c, frame) {
   return sprite([-16, -26, 30, 29], [L(m), wing]);
 }
 
+// ── Chainsaw pup (Sawyer) ───────────────────────────────────────────────────
+
+/**
+ * A round orange devil-pup whose head is a little chainsaw engine: a long flat
+ * guide bar with a toothed chain juts straight out of his brow, his tongue
+ * hangs out, and his tail is the pull cord with a T-grip.
+ */
+function sawpup(c, frame) {
+  const sw = frame === 1 ? 2.2 : frame === 2 ? -2.2 : 0;
+  const d = dark(c, 0.2);
+  const sit = frame === 3;
+  const hy = sit ? -2 : 0;
+  const cord = sit ? "M-11 -4Q-17 -2 -19 -7" : "M-11 -9Q-18 -9 -21 -15";
+  const [gx, gy] = sit ? [-19, -7] : [-21, -15];
+  const tail = L(line(cord, 2.4, INK) + line(cord, 1.2, "#f4ece0") + part(rrD(gx - 4, gy - 1.8, 8, 3.6, 1.6), "#2e2e36", { s: 0.4, w: 1.1 }), sit ? {} : { anim: { type: "sway", pivot: [-11, -9], amp: 0.3, speed: 9 } });
+  let m = "";
+  // Stubby legs under a round body.
+  if (!sit) m += limb([-6, -4], [-6 - sw, -0.5], 3.4, 3.2, d, { s: 0.8 }) + limb([5, -4], [5 + sw, -0.5], 3.4, 3.2, d, { s: 0.8 });
+  m += oval(-1, -8 + (sit ? 1 : 0), 11.5, sit ? 8.5 : 7.5, c) + hi(-5, -12, 3.6, 1.3, 0.4);
+  m += sit ? oval(-5, -0.6, 3, 1.8, d, { s: 0.6 }) + oval(6, -0.6, 3, 1.8, d, { s: 0.6 }) : limb([-2.5, -4], [-2.5 + sw, -0.5], 3.6, 3.4, c, { s: 0.8 }) + limb([8, -4], [8 - sw, -0.5], 3.6, 3.4, c, { s: 0.8 });
+  // Big round head.
+  m += circle(9, -15 + hy, 8.6, c) + hi(5.5, -19.5 + hy, 2.6, 1.3, 0.5);
+  // Guide bar straight out of the brow: rounded nose, chain teeth as a serrated edge, engine housing at the root.
+  const by = -22 + hy;
+  // Chain teeth go on their own un-outlined layer, or the contour fills the gaps between them.
+  let teeth = "";
+  for (let x = 12.5; x <= 26.5; x += 3.5) teeth += fill(polyD([[x, by - 3.4], [x + 1.2, by - 5.6], [x + 2.4, by - 3.4]]), INK) + fill(polyD([[x, by + 3.4], [x + 1.2, by + 5.6], [x + 2.4, by + 3.4]]), INK);
+  m += part(`M10 ${by - 3}H28C31.5 ${by - 3} 31.5 ${by + 3} 28 ${by + 3}H10Z`, "#cfd3da", { s: 0.8 }) + line(`M12 ${by}H28`, 1.1, "#9aa0aa", 0.9) + hi(15, by - 1.6, 5, 0.6, 0.7);
+  m += part(rrD(5.5, by - 4.5, 7.5, 9, 2.2), "#6e727e", { s: 0.6, w: 1.2 }) + fill(rrD(7, by - 2.5, 4.5, 1.2, 0.6), "#3a3a44");
+  // Little black eyes, tongue out.
+  m += eye(11, -14 + hy, 1.5) + eye(15.2, -14.4 + hy, 1.3);
+  m += part(`M13 ${-9.5 + hy}C13 ${-6 + hy} 16.5 ${-6 + hy} 16.5 ${-9.5 + hy}Z`, "#f27a8a", { s: 0.5, w: 1 });
+  return sprite([-27, -34, 62, 38], [tail, L(m), { markup: teeth }]);
+}
+
 export function petSprite(kind, coat, frame) {
+  if (kind === "anatolian") return anatolian(coat, frame);
+  if (kind === "sawpup") return sawpup(coat, frame);
   if (kind === "cat") return cat(coat, frame);
   if (kind === "bird") return bird(coat, frame);
   return dog(coat, frame);

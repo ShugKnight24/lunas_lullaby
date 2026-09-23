@@ -11,8 +11,19 @@ import { SeededRNG } from "../../engine/seeded-rng.js";
 export const GR = { GRASS: 0, PATH: 1, PLAZA: 2, WATER: 3, SAND: 4, FIELD: 5, WOOD: 6, FOREST: 7 };
 
 /** Farm area where tilling and building are allowed. */
-export const FARM = { x0: 2, y0: 2, x1: 33, y1: 62 };
-export const inFarm = (x, y) => x >= FARM.x0 && x <= FARM.x1 && y >= FARM.y0 && y <= FARM.y1;
+/** The farm: everything west of the east fence, down to the southern tree line. */
+export const FARM = { x0: 2, y0: 2, x1: 33, y1: 69 };
+/** The farm's first bounds; map generation still uses them so generated ids stay stable. */
+const GEN_FARM = { x0: 2, y0: 2, x1: 33, y1: 62 };
+const inRect = (r, x, y) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1;
+/** On the farm and not inside a hidden place (or its hedge ring). */
+export const inFarm = (x, y) => inRect(FARM, x, y) && !HIDDEN.some((h) => x >= h.x0 - 1 && x <= h.x1 + 1 && y >= h.y0 - 1 && y <= h.y1 + 1);
+
+/** Which body of water a water tile belongs to (for the fish table). */
+export function waterKind(x, y) {
+  if (x < 20) return "pool";
+  return ((x - 87) / 6.5) ** 2 + ((y - 48) / 5.2) ** 2 < 1 ? "pond" : "river";
+}
 
 /** Building placements: top-left tile, style; door = bottom-centre tile. */
 export const BUILDING_SPOTS = [
@@ -36,13 +47,19 @@ export const WAYPOINTS = {
   cabin_in: { level: "cabin", tx: 4, ty: 3 },
   cabin_door: { level: "world", tx: 86, ty: 28 },
   pier_end: { level: "world", tx: 87, ty: 46 },
-  bridge: { level: "world", tx: 78, ty: 35 },
+  bridge: { level: "world", tx: 77, ty: 34 }, // on the deck (row 35 is river)
+  bakery_nook: { level: "bakery", tx: 10, ty: 6 },
+  plaza_bench2: { level: "world", tx: 55, ty: 30 },
+  plaza_market: { level: "world", tx: 51, ty: 37 },
+  meadow_path: { level: "world", tx: 60, ty: 50 },
 };
 
 export const PLAYER_START = { tx: 8, ty: 11 };
 export const HORSE_START = { tx: 5, ty: 25 };
 export const BOARD = { tx: 63, ty: 22 };
 export const BIN = { tx: 12, ty: 8 };
+/** Farm well (2×2, top-left) between the house path and the field, on its own paving. */
+export const FARM_WELL = { tx: 10, ty: 16 };
 export const HIDDEN = [
   { id: "hollow", name: "Whispering Hollow", x0: 86, y0: 3, x1: 92, y1: 8 },
   { id: "pool", name: "Moonlit Pool", x0: 4, y0: 63, x1: 12, y1: 68 },
@@ -236,7 +253,7 @@ export function buildWorld(seed = 7) {
   // Forage spots (on free ground).
   let sid = 0;
   const spot = (x, y, rare = false) => {
-    if (!ok(x, y) || solid[idx(x, y)] || (!rare && inFarm(x, y))) return;
+    if (!ok(x, y) || solid[idx(x, y)] || (!rare && inRect(GEN_FARM, x, y))) return;
     if (ground[idx(x, y)] === GR.WATER) return;
     for (const o of objects) if (o.tx === x && o.ty === y && o.kind !== "flowers") return;
     spots.push({ id: ++sid, tx: x, ty: y, rare });
@@ -250,7 +267,29 @@ export function buildWorld(seed = 7) {
   spot(5, 65, true);
   spot(11, 66, true);
 
+  addFarmWell(ground, objects, spots, idx);
+  addSouthFence(objects);
   return { w: W, h: H, ground, solid, objects, spots };
+}
+
+/**
+ * The farm well came after the first saves, and world object ids are their
+ * list positions (saved in `objs`). So it is appended last, and anything the
+ * generator left on its paving is flagged `skip` rather than removed, keeping
+ * every other id where it was.
+ */
+function addFarmWell(ground, objects, spots, idx) {
+  const { tx, ty } = FARM_WELL;
+  const onPave = (x, y) => x >= tx - 1 && x <= tx + 2 && y >= ty - 1 && y <= ty + 2;
+  for (let y = ty - 1; y <= ty + 2; y++) for (let x = tx - 1; x <= tx + 2; x++) ground[idx(x, y)] = GR.PATH;
+  for (const o of objects) if (onPave(o.tx, o.ty)) o.skip = true;
+  for (let i = spots.length - 1; i >= 0; i--) if (onPave(spots[i].tx, spots[i].ty)) spots.splice(i, 1); // spot ids are explicit
+  objects.push({ kind: "well", tx, ty, farm: true });
+}
+
+/** The east fence once stopped at row 62; the farm now runs to the tree line (appended, like the well). */
+function addSouthFence(objects) {
+  for (let y = GEN_FARM.y1 + 1; y <= FARM.y1; y++) objects.push({ kind: "fence", tx: 34, ty: y, fixed: true });
 }
 
 /** Interior layouts: size, wall/floor colours, furniture and the exit. */

@@ -9,7 +9,8 @@ import { petSprite, PET_KINDS, PET_COATS } from "../art/animals.js";
 import { toSvg } from "../art/cozy-kit.js";
 import { DEFAULT_PROFILE, save } from "../state.js";
 
-const PET_NAMES = { dog: "Biscuit", cat: "Mochi", bird: "Pip" };
+const PET_NAMES = { anatolian: "Luna", dog: "Biscuit", cat: "Mochi", bird: "Pip", sawpup: "Sawyer" };
+const KIND_LABEL = { anatolian: "Anatolian", dog: "Pup", cat: "Cat", bird: "Bird", sawpup: "Chainsaw Pup" };
 const LABEL = { short: "Short", bob: "Bob", long: "Long", ponytail: "Ponytail", buns: "Buns", curly: "Curly", none: "None", straw: "Straw hat", beanie: "Beanie", cap: "Cap", flower: "Flower crown" };
 
 export function showTitle(root, { onNew, onContinue }) {
@@ -23,6 +24,7 @@ export function showTitle(root, { onNew, onContinue }) {
       {},
       hasSave ? h("button.btn.primary.big", { onclick: () => (el.remove(), onContinue()) }, "Continue") : null,
       h("button.btn.big" + (hasSave ? "" : ".primary"), { onclick: () => (el.remove(), showCreator(root, onNew)) }, "New Game"),
+      h("p.dedication", {}, "for Luna ♡"),
     ),
     h("p.foot", {}, "WASD to walk · Space to use tools · E to interact"),
   );
@@ -68,7 +70,7 @@ export function showCreator(root, onDone) {
     petKinds.replaceChildren(
       ...PET_KINDS.map((k) =>
         h(`button.petcard${p.pet.kind === k ? ".on" : ""}`, {
-          html: toSvg(petSprite(k, PET_COATS[k][0], 0), "pet") + `<span>${k[0].toUpperCase() + k.slice(1)}</span>`,
+          html: toSvg(petSprite(k, PET_COATS[k][0], 0), "pet") + `<span>${KIND_LABEL[k]}</span>`,
           onclick: () => {
             const renamed = p.pet.name === PET_NAMES[p.pet.kind];
             p.pet.kind = k;
@@ -84,7 +86,7 @@ export function showCreator(root, onDone) {
   paintKinds();
 
   const begin = () => {
-    p.name = p.name.trim() || "Luna";
+    p.name = p.name.trim() || DEFAULT_PROFILE.name;
     p.farm = p.farm.trim() || "Moonpetal Farm";
     p.pet.name = p.pet.name.trim() || PET_NAMES[p.pet.kind];
     el.remove();

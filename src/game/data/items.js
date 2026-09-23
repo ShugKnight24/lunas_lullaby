@@ -1,7 +1,14 @@
 /**
  * Item table. `kind` drives what using/placing/gifting an item does;
- * `sell` is the shipping-bin price, `price` the shop price.
+ * `sell` is the shipping-bin price, `price` the shop price. Fish come from
+ * data/fish.js; every crop also has a preserves-jar product (`<crop>_jam`).
  */
+
+import { FISH } from "./fish.js";
+import { CROPS } from "./crops.js";
+
+/** Preserves names per crop; the rest are "<Crop> Preserves". */
+const JAM_NAMES = { strawberry: "Strawberry Jam", cranberry: "Cranberry Jam", tomato: "Tomato Relish", turnip: "Pickled Turnip", pumpkin: "Pumpkin Butter", sunflower: "Sunflower Honey", moonbloom: "Moonbloom Syrup" };
 
 export const ITEMS = {
   hoe: { name: "Hoe", kind: "tool", energy: 2, tip: "Till soil" },
@@ -15,6 +22,7 @@ export const ITEMS = {
   tomato_seed: { name: "Tomato Seeds", kind: "seed", crop: "tomato", price: 50 },
   sunflower_seed: { name: "Sunflower Seeds", kind: "seed", crop: "sunflower", price: 110 },
   pumpkin_seed: { name: "Pumpkin Seeds", kind: "seed", crop: "pumpkin", price: 100 },
+  moonbloom_seed: { name: "Moonbloom Seeds", kind: "seed", crop: "moonbloom", price: 120 },
   cranberry_seed: { name: "Cranberry Seeds", kind: "seed", crop: "cranberry", price: 200 },
 
   turnip: { name: "Turnip", kind: "crop", sell: 40 },
@@ -23,6 +31,7 @@ export const ITEMS = {
   sunflower: { name: "Sunflower", kind: "crop", sell: 150 },
   pumpkin: { name: "Pumpkin", kind: "crop", sell: 320 },
   cranberry: { name: "Cranberries", kind: "crop", sell: 75 },
+  moonbloom: { name: "Moonbloom", kind: "crop", sell: 280 },
 
   spring_onion: { name: "Spring Onion", kind: "forage", sell: 12 },
   leek: { name: "Wild Leek", kind: "forage", sell: 60 },
@@ -34,9 +43,21 @@ export const ITEMS = {
   snow_yam: { name: "Snow Yam", kind: "forage", sell: 100 },
   star_shard: { name: "Star Shard", kind: "forage", sell: 400 },
 
-  sunfish: { name: "Sunfish", kind: "fish", sell: 30 },
-  carp: { name: "Pond Carp", kind: "fish", sell: 45 },
-  trout: { name: "Rainbow Trout", kind: "fish", sell: 90 },
+  ...Object.fromEntries(Object.entries(FISH).map(([id, f]) => [id, { name: f.name, kind: "fish", sell: f.sell }])),
+
+  egg: { name: "Egg", kind: "animal", sell: 50 },
+  fertilizer: { name: "Basic Fertilizer", kind: "fertilizer", tier: 1, price: 30, tip: "Better crop quality · use on tilled soil" },
+  deluxe_fertilizer: { name: "Deluxe Fertilizer", kind: "fertilizer", tier: 2, price: 90, tip: "Much better crop quality · use on tilled soil" },
+  bait: { name: "Bait", kind: "tackle", sell: 1, tip: "Fish bite sooner · used up one per cast from your bag" },
+  hay: { name: "Hay", kind: "feed", price: 20, tip: "Chicken feed · stock it at the coop" },
+
+  mayonnaise: { name: "Mayonnaise", kind: "artisan", sell: 150 },
+  ...Object.fromEntries(Object.values(CROPS).map((c) => [`${c.produce}_jam`, { name: JAM_NAMES[c.produce] ?? `${c.name} Preserves`, kind: "artisan", sell: 0, src: c.produce }])),
+
+  bicycle: { name: "Bicycle", kind: "vehicle", tip: "Press B (or use it) to ride · outdoors only" },
+  preserves_jar: { name: "Preserves Jar", kind: "machine", tip: "Place on the farm · turns a crop into jam" },
+  mayo_machine: { name: "Mayo Machine", kind: "machine", tip: "Place on the farm · turns an egg into mayonnaise" },
+  lucky_lure: { name: "Lucky Lure", kind: "tackle", sell: 50, tip: "Keep it in your bag · wider silver and gold bands when reeling" },
 
   wood: { name: "Wood", kind: "resource", sell: 2 },
   stone: { name: "Stone", kind: "resource", sell: 2 },
@@ -44,10 +65,15 @@ export const ITEMS = {
 
   bread: { name: "Honey Loaf", kind: "food", price: 60, sell: 25, energy: 60 },
   lullaby_loaf: { name: "Lullaby Loaf", kind: "food", sell: 200, energy: 150 },
+  egg_sandwich: { name: "Egg Sandwich", kind: "food", sell: 90, energy: 110 },
+  forager_stew: { name: "Forager's Stew", kind: "food", sell: 110, energy: 130 },
 };
+
+// Jam sells for twice its crop plus 50 (filled in after the table exists).
+for (const id in ITEMS) if (ITEMS[id].src) ITEMS[id].sell = ITEMS[ITEMS[id].src].sell * 2 + 50;
 
 export const TOOL_IDS = ["hoe", "can", "axe", "scythe"];
 export const isGiftable = (id) => {
   const k = ITEMS[id]?.kind;
-  return k === "crop" || k === "forage" || k === "fish" || k === "food";
+  return k === "crop" || k === "forage" || k === "fish" || k === "food" || k === "animal" || k === "artisan";
 };

@@ -11,23 +11,30 @@ import { buildWorld, HIDDEN, INTERIORS } from "./world/map.js";
 import { createWorldLevel, createInterior, makeObject } from "./world/level.js";
 import { GroundCache } from "./world/ground.js";
 import { createCamera, snapCamera, updateCamera } from "./world/camera.js";
-import { updateFx } from "./world/weather.js";
+import { updateFx, spawnFx, FXK } from "./world/weather.js";
 import { resolveObject, cropKey, cropSpr, DEFS } from "./art/index.js";
 import { warmSvgSprites } from "../engine/sprite.js";
 import { visualStage } from "./rules/crops.js";
-import { createPlayer, createPet, createVillager, createChicken, movePlayer, updatePet, teleportPet, updateVillager, placeVillager, updateChicken, facingTile } from "./actors/actors.js";
-import { tick, dayIndex } from "./rules/clock.js";
+import { moveMult, createPlayer, createPet, createVillager, createChicken, movePlayer, updatePet, teleportPet, updateVillager, placeVillager, updateChicken, facingTile } from "./actors/actors.js";
+import { tick, dayIndex, weekday } from "./rules/clock.js";
 import { endDay, respawnForage } from "./rules/day.js";
 import { CROPS } from "./data/crops.js";
 import { ITEMS } from "./data/items.js";
 import { STRUCTURES } from "./data/structures.js";
+import { MACHINES } from "./data/machines.js";
+import { sellMult } from "./rules/skills.js";
+import { WISHES, PET_DREAMS } from "./data/dreams.js";
+import { newWishes, allWishes, petDream } from "./rules/dreams.js";
 import { FORAGE, RARE_FORAGE } from "./data/forage.js";
 import { VILLAGERS, VILLAGER_IDS } from "./data/villagers.js";
-import { useTool, interact, updateTarget, toggleMount } from "./actions.js";
+import { useTool, interact, updateTarget, toggleMount, toggleBike } from "./actions.js";
 import { updateBuild, exitBuild, fenceMasks } from "./build.js";
 import { updateFishing } from "./fishing.js";
 import { renderGame } from "./render.js";
-import { toast, updateHud } from "./ui/hud.js";
+import { toast, updateHud, hotbarSlotAt } from "./ui/hud.js";
+import { toggleMinimap } from "./ui/minimap.js";
+import { queueIntro, updateIntro, updateProfessions, playFinale } from "./progress.js";
+import { sfx } from "./audio/sfx.js";
 
 const WORLD_DATA = buildWorld(7);
 
@@ -98,7 +105,7 @@ export function loadState(g, s) {
   g.pet = createPet(s.profile.pet);
   g.horse = { x: s.horse.x, y: s.horse.y, dir: s.horse.dir, level: s.horse.level };
   g.villagers = VILLAGER_IDS.map((id) => createVillager(id, VILLAGERS[id]));
-  for (const v of g.villagers) placeVillager(v, s.clock.min);
+  for (const v of g.villagers) placeVillager(v, s.clock.min, routineCtx(s));
   g.lv = g.levels[s.player.level] ?? world;
   teleportPet(g.pet, g.player, g.lv);
   resolveSeason(g);
@@ -107,20 +114,25 @@ export function loadState(g, s) {
   snapCamera(g.cam, g.lv, g.player.x, g.player.y - 20, g.view);
 }
 
+/** What villager routines depend on today. */
+const routineCtx = (s) => ({ weather: s.weather, weekday: weekday(s.clock) });
+
 /** Runtime object for a built structure (coops also bring their chickens). */
 export function addStructureObject(g, st) {
   const def = STRUCTURES[st.type];
   const lv = g.levels.world;
   const o = makeObject({ kind: "structure", type: st.type, tx: st.tx, ty: st.ty, w: def.w, h: def.h, uid: st.uid }, 100000 + st.uid);
-  o.solid = !def.floor;
+  o.solid = !def.floor && !def.walk;
+  if (st.color) o.color = st.color;
   o.flat = !!def.floor;
   if (st.type === "coop") {
     o.style = "coop";
     o.y = (st.ty + def.h) * TILE - 2;
-    for (let i = 0; i < 2; i++) g.chickens.push(createChicken(o.x + (i ? 20 : -20), o.y + 20));
-    o.chickens = g.chickens.slice(-2);
+    o.chickens = st.hens.map((_, i) => Object.assign(createChicken(o.x + (i ? 20 : -20), o.y + 20), { coop: st.uid, hen: i }));
+    g.chickens.push(...o.chickens);
   }
   if (st.type === "well") o.y = (st.ty + 2) * TILE - 4;
+  if (MACHINES[st.type]) o.busy = !!st.input;
   lv.add(o);
   resolveObject(o, g.s.clock.season);
   return o;
@@ -177,8 +189,8 @@ export function newGame(g, profile) {
   loadState(g, newState(profile));
   g.mode = "play";
   fadeIn(g);
-  toast(g, `Welcome to ${profile.farm}, ${profile.name}!`);
   writeSave(g);
+  queueIntro(g);
 }
 
 export function continueGame(g) {
@@ -188,6 +200,7 @@ export function continueGame(g) {
   g.mode = "play";
   fadeIn(g);
   toast(g, `Welcome back, ${s.profile.name}.`);
+  queueIntro(g);
   return true;
 }
 
@@ -211,8 +224,10 @@ export function goTo(g, levelId, tx, ty, dir) {
   if (g.fade.target === 1) return;
   const busy = g.mode;
   g.mode = "fade";
+  sfx(g, "door");
   fadeOut(g, () => {
     g.lv = g.levels[levelId];
+    if (!g.lv.outdoor) g.player.biking = false;
     g.player.x = tx * TILE + TILE / 2;
     g.player.y = ty * TILE + TILE / 2 + 6;
     g.player.dir = dir;
@@ -232,21 +247,30 @@ export function sleep(g, passedOut = false) {
     g,
     () => {
       const before = g.s.clock.season;
-      const { state, report } = endDay(g.s, { crops: CROPS, items: ITEMS, w: g.levels.world.w, spots: g.spots, forage: FORAGE, rareForage: RARE_FORAGE, passedOut });
+      const { state, report } = endDay(g.s, { crops: CROPS, items: ITEMS, w: g.levels.world.w, spots: g.spots, forage: FORAGE, rareForage: RARE_FORAGE, passedOut, mult: (id) => sellMult(g.s.professions, id, ITEMS[id]) });
       g.s = state;
       g.s.stats.earned += report.total;
+      // Your companion's wishes that came true today, and what they dreamed.
+      report.wishes = newWishes(g.s, WISHES);
+      for (const id of report.wishes) g.s.dreams = { ...g.s.dreams, [id]: true };
+      report.petDream = petDream(dayIndex(g.s.clock), g.s.pet.happy, PET_DREAMS);
       regrowWorld(g);
+      for (const o of g.levels.world.objects) if (o.kind === "structure" && MACHINES[o.type]) {
+        o.busy = !!g.s.structures.find((st) => st.uid === o.uid)?.input;
+        resolveObject(o, g.s.clock.season);
+      }
       if (g.s.clock.season !== before) resolveSeason(g);
       syncAllSoil(g);
       // Wake up in bed.
       g.lv = g.levels.house;
       g.player.mounted = false;
+      g.player.biking = false;
       g.player.x = 4 * TILE + TILE / 2;
       g.player.y = 5 * TILE + 10;
       g.player.dir = "down";
       if (g.horse.level === "world" && g.s.horse.name) placeHorseAtStable(g);
       teleportPet(g.pet, g.player, g.lv);
-      for (const v of g.villagers) placeVillager(v, g.s.clock.min);
+      for (const v of g.villagers) placeVillager(v, g.s.clock.min, routineCtx(g.s));
       snapCamera(g.cam, g.lv, g.player.x, g.player.y - 20, g.view);
       g.tickAcc = 0;
       writeSave(g);
@@ -255,6 +279,7 @@ export function sleep(g, passedOut = false) {
         g.mode = "play";
         fadeIn(g, 2);
         if (report.seasonChanged) toast(g, `A new season begins!`);
+        if (allWishes(g.s.dreams, WISHES) && !g.s.flags.finale) playFinale(g);
       });
     },
     passedOut ? 1.2 : 1.6,
@@ -304,6 +329,8 @@ export function update(g, dt, t) {
   }
   updateFx(dt);
   updateHud(g, dt);
+  if (g.tutFlash > 0) g.tutFlash -= dt;
+  g.ui.syncHud(g);
   const input = g.input;
 
   if (g.mode === "title") {
@@ -313,7 +340,7 @@ export function update(g, dt, t) {
     const cy = (30 + Math.cos(g.attract * 0.04) * 6) * TILE;
     g.lv = lv;
     updateCamera(g.cam, lv, cx, cy, g.view, dt * 0.5);
-    for (const v of g.villagers) if (v.level === "world") updateVillager(v, g.s.clock.min, g.levels, dt);
+    for (const v of g.villagers) if (v.level === "world") updateVillager(v, g.s.clock.min, routineCtx(g.s), g.levels, dt);
     return;
   }
 
@@ -330,9 +357,12 @@ export function update(g, dt, t) {
     return;
   }
   if (g.mode !== "play") return;
+  updateIntro(g, dt);
+  updateProfessions(g);
 
   if (input.pressed("pause")) return g.ui.pause();
   if (input.pressed("journal")) return g.ui.journal("friends");
+  if (input.pressed("craft")) return g.ui.journal("craft");
   if (input.pressed("friends")) return g.ui.journal("friends");
   if (input.pressed("inventory")) return g.ui.journal("items");
 
@@ -346,7 +376,19 @@ export function update(g, dt, t) {
   if (p.useT > 0) p.useT = Math.max(0, p.useT - dt);
   const ax = input.axis("left", "right");
   const ay = input.axis("up", "down");
-  movePlayer(p, g.lv, ax, ay, dt);
+  p.sprinting = input.down("sprint");
+  if (movePlayer(p, g.lv, ax, ay, dt, moveMult(p, p.sprinting)) && p.sprinting && !p.mounted && !p.biking && Math.random() < dt * 14) spawnFx(FXK.DUST, p.x - (ax || 0) * 8, p.y, -(ax || 0) * 20, -10, 0.35, "rgba(200,170,130,0.6)");
+  if (input.pressed("bike")) toggleBike(g);
+  // Soft footsteps, twice per walk cycle (not on the horse or the bike).
+  if (p.moving && !p.mounted && !p.biking) {
+    const step = Math.floor(p.walkT * 4);
+    if (step !== p.lastStep) (p.lastStep = step), sfx(g, "step");
+  }
+  if (input.pressed("minimap")) toast(g, toggleMinimap() ? "Map shown (N)" : "Map hidden (N)");
+  if (input.pressed("mute")) {
+    g.audio.set("muted", !g.audio.settings.muted);
+    toast(g, g.audio.settings.muted ? "Sound off (M)" : "Sound on (M)");
+  }
   if (p.mounted) {
     g.horse.x = p.x;
     g.horse.y = p.y;
@@ -356,12 +398,14 @@ export function update(g, dt, t) {
   checkHidden(g);
 
   updateTarget(g, facingTile(p, TGT));
-  if (input.pressed("use") || (input.mouse.clicked && !g.ui.pointerOnUi)) useTool(g);
+  const slotClicked = input.mouse.clicked ? hotbarSlotAt(g.view, input.mouse.x, input.mouse.y) : -1;
+  if (slotClicked >= 0) (g.s.sel = slotClicked), (g.hudFlash = 1.2);
+  else if (input.pressed("use") || input.mouse.clicked) useTool(g); // mouse.clicked only fires on the canvas itself
   if (input.pressed("interact") || input.mouse.rightClicked) interact(g);
   if (input.pressed("mount")) toggleMount(g);
 
   updatePet(g.pet, p, g.lv, dt, t);
-  for (const v of g.villagers) updateVillager(v, g.s.clock.min, g.levels, dt);
+  for (const v of g.villagers) updateVillager(v, g.s.clock.min, routineCtx(g.s), g.levels, dt);
   if (g.lv.id === "world") for (const c of g.chickens) updateChicken(c, g.lv, dt);
   for (const o of g.lv.objects) if (o.shake > 0) o.shake = Math.max(0, o.shake - dt);
   for (const d of g.cropDraw.values()) if (d.pop > 0) d.pop = Math.max(0, d.pop - dt);

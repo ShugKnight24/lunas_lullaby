@@ -60,3 +60,13 @@ describe("crops", () => {
     expect(t).toEqual({ watered: false, crop: { id: "turnip", days: 0, dead: false } });
   });
 });
+
+describe("winter", () => {
+  it("every season stocks seeds, and Moonbloom only grows in winter", async () => {
+    const { SHOP_SEEDS } = await import("../../src/game/data/crops.js");
+    for (const list of SHOP_SEEDS) expect(list.length).toBeGreaterThan(0);
+    const M = CROPS.moonbloom;
+    expect(plant(emptySoil(), M, "moonbloom", 3).tile.crop.id).toBe("moonbloom");
+    expect(plant(emptySoil(), M, "moonbloom", 0).error).toMatch(/season/);
+  });
+});

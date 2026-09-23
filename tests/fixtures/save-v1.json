@@ -1,0 +1,41 @@
+{
+  "seed": 7,
+  "profile": {
+    "name": "Luna",
+    "farm": "Moonpetal Farm",
+    "look": { "skin": 1, "hair": "ponytail", "hairColor": "#b0603a", "eyes": "#3f6fb0", "top": "#f4a6b8", "bottom": "#5a6e9a", "hat": "straw" },
+    "pet": { "kind": "dog", "coat": "#d9a066", "name": "Biscuit" }
+  },
+  "player": { "level": "house", "x": 144, "y": 170, "dir": "down" },
+  "horse": { "name": "", "level": "world", "x": 176, "y": 819.2, "dir": "right", "mounted": false },
+  "gold": 500,
+  "energy": 270,
+  "water": 39,
+  "inv": [
+    { "id": "hoe", "n": 1 }, { "id": "can", "n": 1 }, { "id": "axe", "n": 1 }, { "id": "scythe", "n": 1 }, { "id": "rod", "n": 1 },
+    { "id": "turnip_seed", "n": 14 }, { "id": "strawberry_seed", "n": 3 },
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+  ],
+  "sel": 1,
+  "clock": { "min": 530, "day": 3, "season": 0, "year": 1 },
+  "weather": "sun",
+  "soil": { "2325": { "watered": false, "crop": { "id": "turnip", "days": 1, "dead": false } } },
+  "structures": [],
+  "objs": {},
+  "forage": {
+    "1": { "item": "spring_onion", "next": 0 },
+    "3": { "item": "leek", "next": 0 },
+    "28": { "item": "star_shard", "next": 0 }
+  },
+  "rel": {
+    "mira": { "pts": 0, "talked": -1, "gifted": -1, "events": {}, "met": false },
+    "theo": { "pts": 0, "talked": -1, "gifted": -1, "events": {}, "met": false },
+    "juniper": { "pts": 0, "talked": -1, "gifted": -1, "events": {}, "met": false }
+  },
+  "pet": { "happy": 40, "petted": -1 },
+  "bin": [],
+  "flags": { "found": {} },
+  "stats": { "earned": 0, "shippedDays": 0 },
+  "uid": 1,
+  "v": 1
+}

@@ -3,7 +3,7 @@
  * animation state and drawing. Positions are world units at the feet.
  */
 
-import { TILE, WALK_SPEED, RIDE_MULT } from "../config.js";
+import { TILE, WALK_SPEED, RIDE_MULT, BIKE_MULT, SPRINT_MULT } from "../config.js";
 import { personFrames, USE_HAND } from "../art/person.js";
 import { RIDE_OFFSET } from "../art/animals.js";
 import { DEFS, petSpr, horseSpr, chickenSpr, iconSpr, iconKey } from "../art/index.js";
@@ -11,7 +11,8 @@ import { drawSvgSprite } from "../../engine/sprite.js";
 import { moveBox, boxFree } from "../world/collide.js";
 import { findPath } from "../world/path.js";
 import { WAYPOINTS, BUILDING_SPOTS, INTERIORS } from "../world/map.js";
-import { BUILDINGS } from "../art/props.js";
+import { BUILDINGS, bikeSprite, BIKE_OFFSET } from "../art/props.js";
+import { scheduleFor, waypointAt } from "../rules/schedule.js";
 
 const OPT = { alpha: 1, flip: false, cap: 512 };
 const WALK_CYCLE = [1, 0, 2, 0];
@@ -19,6 +20,7 @@ const WALK_CYCLE = [1, 0, 2, 0];
 const HK = {};
 for (const d of ["side", "down", "up"]) HK[d] = [0, 1, 2].map((f) => ({ m: `horse:${d}:${f}:m`, o: `horse:${d}:${f}:o` }));
 const CK = ["chick:0", "chick:1"];
+const BIKES = {};
 const HS = { side: [], down: [], up: [] };
 const CS = [];
 const horseFrame = (sd, fr) => (HS[sd][fr] ??= horseSpr(sd, fr));
@@ -50,7 +52,10 @@ export function createPlayer(look) {
 }
 
 /** Move from input axes; returns true if movement was attempted. */
-export function movePlayer(p, lv, ax, ay, dt) {
+/** Speed multiplier: horse, bike, sprint (Shift) or walking. */
+export const moveMult = (p, sprint) => (p.mounted ? RIDE_MULT : p.biking ? BIKE_MULT : sprint ? SPRINT_MULT : 1);
+
+export function movePlayer(p, lv, ax, ay, dt, mult = 1) {
   p.moving = false;
   p.vx = p.vy = 0;
   if (p.useT > 0 || (!ax && !ay)) {
@@ -58,7 +63,7 @@ export function movePlayer(p, lv, ax, ay, dt) {
     return false;
   }
   const len = Math.hypot(ax, ay);
-  const sp = WALK_SPEED * (p.mounted ? RIDE_MULT : 1) * dt;
+  const sp = WALK_SPEED * mult * dt;
   const dx = (ax / len) * sp;
   const dy = (ay / len) * sp;
   p.dir = dirFrom(ax, ay, p.dir);
@@ -69,7 +74,7 @@ export function movePlayer(p, lv, ax, ay, dt) {
   p.vy = (p.y - by) / dt;
   p.moving = true;
   p.idleT = 0;
-  p.walkT += dt * (p.mounted ? 1.25 : 1);
+  p.walkT += dt * (p.mounted ? 1.25 : mult);
   return true;
 }
 
@@ -95,6 +100,16 @@ export function drawPlayer(ctx, p, horse, sx, sy, z, t) {
     const rider = p.frames[sd][4];
     blit(ctx, rider.key, rider.sprite, sx + (flip ? -off[0] : off[0]) * z, sy + (off[1] - bob) * z, z, t, flip);
     if (hs.over) blit(ctx, HK[sd][fr].o, hs.over, sx, sy, z, t, flip);
+    return;
+  }
+  if (p.biking) {
+    const bob = p.moving ? Math.abs(Math.sin(p.walkT * 9)) * 1.2 : 0;
+    const off = BIKE_OFFSET[sd];
+    shadow(ctx, sx, sy, sd === "side" ? 22 : 10, 4, z);
+    blit(ctx, `bike:${sd}:u`, (BIKES[`${sd}u`] ??= bikeSprite(sd, "under")), sx, sy, z, t, flip);
+    const rider = p.frames[sd][4];
+    blit(ctx, rider.key, rider.sprite, sx + (flip ? -off[0] : off[0]) * z, sy + (off[1] - bob) * z, z, t, flip);
+    blit(ctx, `bike:${sd}:o`, (BIKES[`${sd}o`] ??= bikeSprite(sd, "over")), sx, sy, z, t, flip);
     return;
   }
   const using = p.useT > 0;
@@ -175,7 +190,7 @@ export function updatePet(a, pl, lv, dt, t) {
   const dx = tx - a.x;
   const dy = ty - a.y;
   const d = Math.hypot(dx, dy);
-  const maxSp = WALK_SPEED * (pl.mounted ? RIDE_MULT * 1.05 : 1.1) * (a.state === "sniff" ? 0.35 : 1);
+  const maxSp = WALK_SPEED * (pl.mounted ? RIDE_MULT * 1.05 : Math.max(1.1, moveMult(pl, pl.sprinting) * 1.05)) * (a.state === "sniff" ? 0.35 : 1);
   const slow = 40;
   const want = a.state === "sit" || d < 6 ? 0 : Math.min(maxSp, (maxSp * d) / slow);
   const wx = d > 0.01 ? (dx / d) * want : 0;
@@ -259,34 +274,30 @@ export function createVillager(id, def) {
   return { id, def, level: "world", x: 0, y: 0, dir: "down", walkT: 0, moving: false, path: null, pi: 0, goal: "", hop: null, pause: 0, frames: personFrames(def.look, `v${id}`) };
 }
 
-export function currentWaypoint(def, min) {
-  const sch = def.schedule;
-  let wp = sch[0][1];
-  for (let i = 0; i < sch.length; i++) if (min >= sch[i][0]) wp = sch[i][1];
-  return wp;
-}
+/** Where a villager is headed now; `ctx` is `{ weather, weekday }` (see rules/schedule.js). */
+export const currentWaypoint = (def, min, ctx) => waypointAt(scheduleFor(def, ctx), min);
 
-const doorOf = (levelId) => {
+export const doorOf = (levelId) => {
   const b = BUILDING_SPOTS.find((s) => s.interior === levelId);
   const st = BUILDINGS[b.style];
   return [b.tx + (st.w >> 1), b.ty + st.d - 1];
 };
 
 /** Put a villager straight at its scheduled waypoint (load / new day). */
-export function placeVillager(v, min) {
-  const wp = WAYPOINTS[currentWaypoint(v.def, min)];
+export function placeVillager(v, min, ctx) {
+  const wp = WAYPOINTS[currentWaypoint(v.def, min, ctx)];
   v.level = wp.level;
   v.x = wp.tx * TILE + TILE / 2;
   v.y = wp.ty * TILE + TILE / 2 + 6;
-  v.goal = currentWaypoint(v.def, min);
+  v.goal = currentWaypoint(v.def, min, ctx);
   v.path = null;
   v.hop = null;
   v.dir = "down";
 }
 
 /** Walk the schedule; `levels` maps id → Level. */
-export function updateVillager(v, min, levels, dt) {
-  const name = currentWaypoint(v.def, min);
+export function updateVillager(v, min, ctx, levels, dt) {
+  const name = currentWaypoint(v.def, min, ctx);
   if (name !== v.goal) {
     v.goal = name;
     v.path = null;

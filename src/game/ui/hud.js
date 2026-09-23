@@ -1,6 +1,7 @@
 /**
- * Cozy canvas HUD: clock/date/season/weather dial, gold, energy bar, the
- * hotbar with item icons, the E prompt bubble, toasts and the fishing bar.
+ * Cozy canvas HUD: clock/date/season/weather dial, gold and tonight's
+ * shipping, energy bar, the hotbar with item icons, the E prompt bubble,
+ * toasts, the fishing bar, the tutorial's world arrow and the minimap.
  * Static panel art is baked once per size into offscreen canvases; only
  * text, bars and icons are drawn per frame, from cached strings.
  */
@@ -8,6 +9,14 @@
 import { HOTBAR, MAX_ENERGY, CAN_CAPACITY } from "../config.js";
 import { ITEMS } from "../data/items.js";
 import { timeLabel, weekday, seasonName } from "../rules/clock.js";
+import { QUALITY, qualityName } from "../rules/quality.js";
+import { settle } from "../rules/shipping.js";
+import { qualityBands } from "../rules/fishing.js";
+import { sellMult } from "../rules/skills.js";
+import { TUTORIAL } from "../data/tutorial.js";
+import { FARM_WELL, BIN } from "../world/map.js";
+import { doorOf } from "../actors/actors.js";
+import { drawMinimap, minimapRect } from "./minimap.js";
 import { drawSvgSprite } from "../../engine/sprite.js";
 import { DEFS, iconSpr, iconKey } from "../art/index.js";
 
@@ -114,8 +123,25 @@ function icon(ctx, id, x, y, ppu, t) {
   drawSvgSprite(ctx, iconKey(id), iconSpr(id), DEFS, Math.round(x), Math.round(y), ppu, t, OPT);
 }
 
+/** Silver/gold star in a slot's corner. */
+function qualityStar(ctx, q, x, y) {
+  if (!q) return;
+  ctx.fillStyle = QUALITY[q].color;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 ? 2.6 : 6;
+    const a = (i * Math.PI) / 5 - Math.PI / 2;
+    ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+}
+
 // Cached HUD strings.
-const cache = { min: -1, time: "", day: -1, date: "", season: "", gold: -1, goldS: "" };
+const cache = { min: -1, time: "", day: -1, date: "", season: "", gold: -1, goldS: "", bin: null, binS: "", energy: -1, energyS: "" };
 
 function strings(g) {
   const c = g.s.clock;
@@ -132,6 +158,15 @@ function strings(g) {
   if (g.s.gold !== cache.gold) {
     cache.gold = g.s.gold;
     cache.goldS = `${g.s.gold.toLocaleString()}g`;
+  }
+  if (g.s.bin !== cache.bin) {
+    cache.bin = g.s.bin;
+    const total = settle(g.s.bin, ITEMS, (id) => sellMult(g.s.professions, id, ITEMS[id])).total;
+    cache.binS = total ? `+${total.toLocaleString()}g tonight` : "";
+  }
+  if (g.s.energy !== cache.energy) {
+    cache.energy = g.s.energy;
+    cache.energyS = String(Math.round(g.s.energy));
   }
 }
 
@@ -197,6 +232,13 @@ function drawClock(ctx, view, g, k) {
   ctx.fillStyle = "#fff4b8";
   ctx.fillRect(view.w - 131, gy + 13, 2.5, 7);
   text(ctx, cache.goldS, view.w - 28, gy + 25, F.mid, INK, "right");
+  // What the shipping bin will pay out tonight.
+  if (cache.binS) {
+    ctx.font = F.small;
+    const bw = Math.ceil((ctx.measureText(cache.binS).width + 24) / 8) * 8;
+    blitPanel(ctx, bw, 28, 14, view.w - bw - 16, gy + 44, k, "#eaf6dc");
+    text(ctx, cache.binS, view.w - 28, gy + 63, F.small, "#3f6a2a", "right");
+  }
 }
 
 function drawWeatherIcon(ctx, w, x, y, night) {
@@ -250,7 +292,9 @@ function drawEnergy(ctx, view, g, k) {
   const w = 30;
   const h = 170;
   const x = view.w - w - 18;
-  const y = view.h - h - 20;
+  // Beside the hotbar when there's room, otherwise stacked above it.
+  const bar = hotbarRect(view);
+  const y = bar.x + bar.w + 8 < x ? view.h - h - 20 : bar.y - h - 26;
   blitPanel(ctx, w, h, 14, x, y, k);
   const f = g.s.energy / MAX_ENERGY;
   const ih = h - 30;
@@ -262,15 +306,33 @@ function drawEnergy(ctx, view, g, k) {
   ctx.fillStyle = "rgba(255,255,255,0.45)";
   ctx.fillRect(x + 9, y + 10 + ih - fh, 4, Math.max(0, fh - 6));
   text(ctx, "E", x + w / 2, y + h - 7, F.mid, INK, "center");
+  outlined(ctx, cache.energyS, x + w / 2, y - 6, F.count, "#fff", "center");
+}
+
+const SLOT_GAP = 6;
+
+/**
+ * Hotbar panel rectangle and slot size for a view (shared with click
+ * hit-testing): 50px slots, shrunk to fit narrow screens.
+ */
+export function hotbarRect(view) {
+  const S = Math.min(50, Math.floor((view.w - 24 - 20 - (HOTBAR - 1) * SLOT_GAP) / HOTBAR));
+  const w = HOTBAR * S + (HOTBAR - 1) * SLOT_GAP + 20;
+  const h = S + 20;
+  return { x: Math.round(view.w / 2 - w / 2), y: view.h - h - 14, w, h, S };
+}
+
+/** Hotbar slot under a screen point, or -1. */
+export function hotbarSlotAt(view, x, y) {
+  const r = hotbarRect(view);
+  if (y < r.y || y > r.y + r.h || x < r.x + 10 || x > r.x + r.w - 10) return -1;
+  const i = Math.floor((x - r.x - 10) / (r.S + SLOT_GAP));
+  return i >= 0 && i < HOTBAR ? i : -1;
 }
 
 function drawHotbar(ctx, view, g, t, k) {
-  const S = 50;
-  const gap = 6;
-  const w = HOTBAR * S + (HOTBAR - 1) * gap + 20;
-  const h = S + 20;
-  const x0 = Math.round(view.w / 2 - w / 2);
-  const y0 = view.h - h - 14;
+  const gap = SLOT_GAP;
+  const { x: x0, y: y0, w, h, S } = hotbarRect(view);
   blitPanel(ctx, w, h, 20, x0, y0, k);
   const inv = g.s.inv;
   for (let i = 0; i < HOTBAR; i++) {
@@ -286,7 +348,8 @@ function drawHotbar(ctx, view, g, t, k) {
     ctx.stroke();
     const s = inv[i];
     if (s) {
-      icon(ctx, s.id, x + S / 2, y + S / 2, 1.25, t);
+      icon(ctx, s.id, x + S / 2, y + S / 2, 1.25 * (S / 50), t);
+      qualityStar(ctx, s.q, x + 9, y + S - 9);
       if (s.n > 1) outlined(ctx, NUMS[Math.min(999, s.n)], x + S - 5, y + S - 5, F.count);
       if (s.id === "can") {
         const f = g.s.water / CAN_CAPACITY;
@@ -301,7 +364,7 @@ function drawHotbar(ctx, view, g, t, k) {
   // Selected item name, briefly after changing slots.
   const s = inv[g.s.sel];
   if (s && g.hudFlash > 0) {
-    const name = ITEMS[s.id].name;
+    const name = qualityName(ITEMS[s.id].name, s.q);
     ctx.globalAlpha = Math.min(1, g.hudFlash * 2);
     ctx.font = F.mid;
     const tw = ctx.measureText(name).width + 28;
@@ -345,6 +408,52 @@ function drawToasts(ctx, view, g, t, k) {
   ctx.globalAlpha = 1;
 }
 
+/**
+ * Point (art units, in the current level) the current tutorial step points
+ * at, or null. `anywhere` gives the outdoor spot even while you're indoors
+ * (for the minimap).
+ */
+function tutorialPoint(g, anywhere = false) {
+  const tut = g.s.tutorial;
+  const step = !tut.done && g.s.flags.intro && TUTORIAL[tut.step];
+  if (!step?.point) return null;
+  const T = 32;
+  if (!anywhere && step.point === "house" && g.lv.id === "house") {
+    const bed = g.lv.objects.find((o) => o.name === "bed");
+    return bed && [bed.x, bed.y - 70];
+  }
+  if (!anywhere && g.lv.id !== "world") return null;
+  if (step.point === "well") return [(FARM_WELL.tx + 1) * T, FARM_WELL.ty * T - 30];
+  if (step.point === "bin") return [(BIN.tx + 0.5) * T, BIN.ty * T - 20];
+  if (step.point === "house") {
+    const [dx, dy] = doorOf("house");
+    return [(dx + 0.5) * T, dy * T - 10];
+  }
+  return null;
+}
+
+function drawTutorialArrow(ctx, g, ox, oy, z, t) {
+  if (g.mode !== "play") return;
+  const p = tutorialPoint(g);
+  if (!p) return;
+  const x = ox + p[0] * z;
+  const y = oy + p[1] * z - 8 - Math.abs(Math.sin(t * 3)) * 8;
+  ctx.fillStyle = "#f6c63c";
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x - 11, y - 14);
+  ctx.lineTo(x - 5, y - 14);
+  ctx.lineTo(x - 5, y - 26);
+  ctx.lineTo(x + 5, y - 26);
+  ctx.lineTo(x + 5, y - 14);
+  ctx.lineTo(x + 11, y - 14);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+}
+
 function drawFishingBar(ctx, g, ox, oy, z, k) {
   const f = g.fishing;
   const p = g.player;
@@ -364,6 +473,13 @@ function drawFishingBar(ctx, g, ox, oy, z, k) {
   ctx.fillRect(bx + 8, by + 8, w - 16, 10);
   ctx.fillStyle = "#8fd06a";
   ctx.fillRect(bx + 8 + (w - 16) * f.zone, by + 8, (w - 16) * f.zoneW, 10);
+  // Silver (middle half) and gold (middle fifth) bands, as in rules/fishing.catchQuality.
+  const mid = f.zone + f.zoneW / 2;
+  const [goldK, silverK] = qualityBands(f.lucky);
+  for (const [k, q] of [[silverK, 1], [goldK, 2]]) {
+    ctx.fillStyle = QUALITY[q].color;
+    ctx.fillRect(bx + 8 + (w - 16) * (mid - (f.zoneW / 2) * k), by + 10, (w - 16) * f.zoneW * k, 6);
+  }
   ctx.fillStyle = "#e8566a";
   ctx.strokeStyle = INK;
   ctx.lineWidth = 2;
@@ -382,9 +498,11 @@ export function drawHud(ctx, view, g, t, ox, oy, z) {
   ctx.textBaseline = "alphabetic";
   if (g.mode === "build") return drawToasts(ctx, view, g, t, k);
   drawPrompt(ctx, g, ox, oy, z, k);
+  drawTutorialArrow(ctx, g, ox, oy, z, t);
   if (g.mode === "fishing") drawFishingBar(ctx, g, ox, oy, z, k);
   drawClock(ctx, view, g, k);
   drawEnergy(ctx, view, g, k);
+  if (g.mode === "play" || g.mode === "fishing") drawMinimap(ctx, g, t, minimapRect(view, hotbarRect(view), g.levels.world), (w, h, x, y) => blitPanel(ctx, w, h, 14, x, y, k), tutorialPoint(g, true));
   drawHotbar(ctx, view, g, t, k);
   drawToasts(ctx, view, g, t, k);
 }

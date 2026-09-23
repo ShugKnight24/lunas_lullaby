@@ -10,6 +10,7 @@ import { cropSprite, soilSprite } from "./crops-art.js";
 import { iconSprite } from "./icons.js";
 import { petSprite, horseSprite, chickenSprite } from "./animals.js";
 import { CROPS } from "../data/crops.js";
+import { STRUCTURES } from "../data/structures.js";
 
 export { DEFS };
 
@@ -123,9 +124,16 @@ function resolveStructure(o, season) {
   const t = o.type;
   let key = t;
   let build;
-  if (t === "fence") {
-    key = `fence:${o.mask ?? 0}:${s}`;
-    build = () => P.fenceSprite(o.mask ?? 0, s);
+  const def = STRUCTURES[t];
+  if (def?.fence) {
+    key = `fence:${def.fence}:${o.color ?? "-"}:${o.mask ?? 0}:${s}`;
+    build = () => P.fenceSprite(o.mask ?? 0, s, def.fence, o.color);
+  } else if (def?.deco === "planter") {
+    key = `planter:${season}`;
+    build = () => P.planterSprite(season);
+  } else if (def?.deco) {
+    key = def.deco;
+    build = def.deco === "lamp" ? P.lampSprite : P.benchSprite;
   } else if (t === "path") {
     key = `path:${s}`;
     build = () => P.pathTileSprite(s);
@@ -137,6 +145,9 @@ function resolveStructure(o, season) {
   } else if (t === "well") {
     key = `well:${s}`;
     build = () => P.wellSprite(s);
+  } else if (t === "preserves_jar" || t === "mayo_machine") {
+    key = `${t}:${o.busy ? 1 : 0}`;
+    build = () => (t === "preserves_jar" ? P.preservesJarSprite : P.mayoMachineSprite)(!!o.busy);
   }
   o.key = key;
   o.spr = sprite(key, build);

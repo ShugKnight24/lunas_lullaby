@@ -331,8 +331,18 @@ export function lilySprite(seed = 0) {
 // ── Structures (buildable) ──────────────────────────────────────────────────
 
 /** Fence piece; `mask` bits: 1 left, 2 right, 4 up, 8 down neighbour. */
-export function fenceSprite(mask, season = 0) {
-  const w = "#c98a4a";
+/**
+ * Fence piece for a neighbour mask (1 left, 2 right, 4 up, 8 down) in one of
+ * the styles: wood (the original), gate, rustic logs, picket, stone wall or
+ * hedge. `color` paints wood, gate and picket.
+ */
+export function fenceSprite(mask, season = 0, style = "wood", color = null) {
+  if (style === "rustic") return rusticFence(mask, season);
+  if (style === "picket") return picketFence(mask, season, color ?? "#f4ece0");
+  if (style === "stone") return stoneWall(mask, season);
+  if (style === "hedge") return hedge(mask, season);
+  if (style === "gate") return gate(mask, season, color ?? "#c98a4a");
+  const w = color ?? "#c98a4a";
   let m = "";
   if (mask & 4) m += part(rrD(-2.5, -30, 5, 20, 2), dark(w, 0.08), { s: 0.8, w: 1.2 });
   if (mask & 1) m += part(rrD(-16, -20, 16, 4.5, 2), w, { s: 0.8, w: 1.2 }) + part(rrD(-16, -11, 16, 4.5, 2), w, { s: 0.8, w: 1.2 });
@@ -341,6 +351,76 @@ export function fenceSprite(mask, season = 0) {
   if (season === 3) m += part(capD([-4, -23], [4, -23], 4, 4), "#fbfdff", { s: 0.4, w: 1 });
   if (mask & 8) m += part(rrD(-2.5, -8, 5, 18, 2), dark(w, 0.08), { s: 0.8, w: 1.2 });
   return sprite([-18, -32, 36, 44], [L(m)]);
+}
+
+const snowCap = (x, y, w) => part(capD([x - w, y], [x + w, y], 4, 4), "#fbfdff", { s: 0.4, w: 1 });
+
+function rusticFence(mask, season) {
+  const w = "#9a6a48";
+  let m = "";
+  const rail = (x0, x1, y) => part(capD([x0, y], [x1, y], 3.2, 3.2), w, { s: 0.8, w: 1.2 }) + line(`M${x0 + 3} ${y - 0.6}H${x1 - 3}`, 0.8, lite(w, 0.25), 0.8);
+  if (mask & 4) m += part(rrD(-3, -30, 6, 20, 3), dark(w, 0.1), { s: 0.8, w: 1.2 });
+  if (mask & 1) m += rail(-17, 0, -19) + rail(-17, 0, -9);
+  if (mask & 2) m += rail(0, 17, -19) + rail(0, 17, -9);
+  m += part(rrD(-4.5, -25, 9, 25, 4), w, { s: 1.4 }) + part(ellD(0, -25, 4.5, 2), lite(w, 0.3), { s: 0.4, w: 1 }) + circle(0, -25, 1.2, dark(w, 0.2), { s: 0, w: 0 });
+  if (season === 3) m += snowCap(0, -26, 4);
+  if (mask & 8) m += part(rrD(-3, -8, 6, 18, 3), dark(w, 0.1), { s: 0.8, w: 1.2 });
+  return sprite([-18, -32, 36, 44], [L(m)]);
+}
+
+function picketFence(mask, season, c) {
+  let m = "";
+  const picket = (x) => part(`M${x - 2.4} 0V-19L${x} -23L${x + 2.4} -19V0Z`, c, { s: 0.8, w: 1.1 });
+  if (mask & 4) m += part(rrD(-2.5, -30, 5, 20, 1.5), dark(c, 0.08), { s: 0.8, w: 1.2 });
+  if (mask & 1) m += part(rrD(-16, -16, 16, 3.4, 1.2), dark(c, 0.1), { s: 0.6, w: 1.1 }) + picket(-11) + picket(-5.5);
+  if (mask & 2) m += part(rrD(0, -16, 16, 3.4, 1.2), dark(c, 0.1), { s: 0.6, w: 1.1 }) + picket(5.5) + picket(11);
+  m += part("M-3.5 0V-24L0 -28.5L3.5 -24V0Z", lite(c, 0.08), { s: 1.2 });
+  if (season === 3) m += snowCap(0, -25, 3);
+  if (mask & 8) m += part(rrD(-2.5, -8, 5, 18, 1.5), dark(c, 0.08), { s: 0.8, w: 1.2 });
+  return sprite([-18, -32, 36, 44], [L(m)]);
+}
+
+function stoneWall(mask, season) {
+  const c = "#b4acb4";
+  let m = "";
+  const block = (x, y, w, h, k) => part(rrD(x, y, w, h, 2), k ? dark(c, 0.06) : c, { s: 0.8, w: 1.1, lo: dark(c, 0.2) });
+  if (mask & 4) m += block(-5, -30, 10, 10, 1) + block(-5, -22, 10, 8, 0);
+  if (mask & 1) m += block(-17, -16, 9, 8, 0) + block(-9, -16, 9, 8, 1) + block(-17, -9, 11, 9, 1) + block(-7, -9, 7, 9, 0);
+  if (mask & 2) m += block(0, -16, 9, 8, 1) + block(8, -16, 9, 8, 0) + block(0, -9, 7, 9, 0) + block(6, -9, 11, 9, 1);
+  m += block(-6, -18, 12, 9, 0) + block(-6, -10, 12, 10, 1);
+  if (season === 3) m += snowCap(0, -18.5, 5);
+  else m += fill(ellD(-3, -17.4, 2.2, 0.8), "#7cae62", 0.8);
+  if (mask & 8) m += block(-5, -4, 10, 12, 0);
+  return sprite([-18, -32, 36, 44], [L(m)]);
+}
+
+function hedge(mask, season) {
+  const c = season === 3 ? "#7a9a8a" : season === 2 ? "#8a9a4a" : "#5f9a54";
+  let m = "";
+  const puff = (x, y, r) => circle(x, y, r, c, { s: 1.2 });
+  if (mask & 4) m += puff(0, -24, 7);
+  if (mask & 1) m += puff(-11, -10, 8);
+  if (mask & 2) m += puff(11, -10, 8);
+  m += puff(0, -12, 10) + hi(-4, -16, 3, 1.5, 0.35);
+  if (season === 0) m += circle(-4, -8, 1.3, "#f8b8c8", { s: 0, w: 0.8 }) + circle(5, -15, 1.3, "#fff4c0", { s: 0, w: 0.8 });
+  if (season === 3) m += fill(ellD(0, -20, 7, 2.4), "#fbfdff");
+  if (mask & 8) m += puff(0, 2, 7);
+  return sprite([-20, -34, 40, 46], [L(m)]);
+}
+
+/** Gate: two posts and a swinging board you can walk through. */
+function gate(mask, season, w) {
+  const horiz = !(mask & 12) || mask & 3;
+  let m = "";
+  if (horiz) {
+    m += part(rrD(-15, -20, 30, 4.5, 2), w, { s: 0.8, w: 1.2 }) + part(rrD(-15, -11, 30, 4.5, 2), w, { s: 0.8, w: 1.2 }) + line("M-13 -9L13 -18", 3, dark(w, 0.12));
+    m += part("M-18 0V-22L-14.5 -25L-11 -22V0Z", lite(w, 0.1), { s: 1.2 }) + part("M11 0V-22L14.5 -25L18 -22V0Z", lite(w, 0.1), { s: 1.2 });
+    m += circle(10, -13, 1.3, "#e8c86a", { s: 0.4, w: 1 });
+  } else {
+    m += part(rrD(-2.5, -30, 5, 40, 2), w, { s: 0.8, w: 1.2 }) + part("M-4 -2V-24L0 -28L4 -24V-2Z", lite(w, 0.1), { s: 1.2 });
+  }
+  if (season === 3) m += snowCap(horiz ? 0 : 0, horiz ? -21 : -25, horiz ? 13 : 3);
+  return sprite([-20, -32, 40, 44], [L(m)]);
 }
 
 export function scarecrowSprite() {
@@ -356,6 +436,48 @@ export function sprinklerSprite() {
   const c = "#9fb4c4";
   const m = part("M-9 0C-10 -6 -6 -10 0 -10C6 -10 10 -6 9 0Z", c, { s: 1.6 }) + part(rrD(-2, -16, 4, 7, 1.5), "#d8a84a", { s: 0.6, w: 1.2 }) + circle(0, -17, 2.6, "#e8c86a", { s: 0.6, w: 1.2 }) + hi(-4, -6, 2, 1, 0.6);
   return sprite([-14, -22, 28, 26], [L(m)]);
+}
+
+/** Preserves jar: glass crock with a wooden lid; `busy` fills it with amber jam. */
+export function preservesJarSprite(busy) {
+  let m = part(rrD(-10, -24, 20, 24, 6), busy ? "#e8a04a" : "#d4ecf4", { s: 1.6 });
+  if (busy) m += fill(ellD(-3, -14, 1.6, 1.6), "#fff2c8", 0.8) + fill(ellD(3, -9, 1.2, 1.2), "#fff2c8", 0.7);
+  m += hi(-6, -18, 1.6, 4, 0.6) + part(rrD(-11, -28, 22, 6, 2), "#b07a4a", { s: 0.8 }) + part(rrD(-3, -31, 6, 4, 1.5), "#8a5a3a", { s: 0.4, w: 1.1 });
+  return sprite([-15, -35, 30, 38], [L(m)]);
+}
+
+/** Mayo machine: a cream box with a hopper and crank; `busy` lights the window. */
+export function mayoMachineSprite(busy) {
+  let m = part("M-8 -30L8 -30L4 -24H-4Z", "#c8b8a0", { s: 0.8 });
+  m += part(rrD(-12, -24, 24, 24, 4), "#efe2c6", { s: 1.8 }) + part(rrD(-6, -18, 12, 8, 2), busy ? "#f6d86a" : "#c8c0b0", { s: 0.6, w: 1.2 });
+  m += line("M12 -14H17V-20", 2.2, INK) + circle(17, -21, 2, "#e8566a", { s: 0.4, w: 1 }) + hi(-8, -20, 1.4, 3, 0.5);
+  return sprite([-16, -34, 36, 38], [L(m)]);
+}
+
+// ── Bicycle ─────────────────────────────────────────────────────────────────
+
+const BIKE = "#e8566a";
+const TIRE = "#3a3a44";
+/** Seat height the rider sits at, per facing (art units, rider's feet origin). */
+export const BIKE_OFFSET = { side: [-3, -12], down: [0, -11], up: [0, -11] };
+
+/**
+ * Bicycle with a wicker basket. `under` is drawn beneath the rider and
+ * `over` on top (handlebars and basket when it faces you).
+ */
+export function bikeSprite(sd, layer) {
+  const wheel = (x) => circle(x, -7, 7, TIRE, { s: 0.6 }) + circle(x, -7, 4.2, "#c8ccd4", { s: 0, w: 0 }) + circle(x, -7, 1.4, TIRE, { s: 0, w: 0 });
+  if (sd === "side") {
+    if (layer === "over") return sprite([-22, -30, 44, 32], [L(part(rrD(9, -24, 9, 6, 2), "#c8945a", { s: 0.6, w: 1.2 }) + line("M10 -22H17M10 -20H17", 0.7, dark("#c8945a", 0.35)))]);
+    const frame = line("M-11 -7L-3 -17L8 -19L11 -7M-3 -17L0 -7L-11 -7M8 -19L9 -22", 2.6, BIKE);
+    return sprite([-22, -30, 44, 32], [L(wheel(-11) + wheel(11) + frame + part(ellD(-4, -18.5, 3.4, 1.4), "#6a4a3a", { s: 0.4, w: 1 }) + line("M6 -22H12", 2, TIRE))]);
+  }
+  // Facing toward (down) or away (up): one narrow wheel under the rider.
+  if (layer === "over") {
+    if (sd !== "down") return sprite([-12, -26, 24, 28], [L(line("M-8 -18H8", 2.2, TIRE))]);
+    return sprite([-12, -26, 24, 28], [L(line("M-8 -18H8", 2.2, TIRE) + part(rrD(-5, -17, 10, 6, 2), "#c8945a", { s: 0.6, w: 1.2 }))]);
+  }
+  return sprite([-12, -26, 24, 28], [L(part(ellD(0, -7, 2.4, 7), TIRE, { s: 0.4 }) + line("M0 -14V-18", 2.4, BIKE))]);
 }
 
 /** Flat stepping-stone path tile (drawn on the ground layer). */

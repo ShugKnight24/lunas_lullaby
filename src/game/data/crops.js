@@ -10,6 +10,7 @@ export const CROPS = {
   tomato: { name: "Tomato", seasons: ["summer"], stages: [2, 2, 2, 2, 3], regrow: 4, seed: "tomato_seed", produce: "tomato", yield: 1, color: "#e5533d", accent: "#5aa25a" },
   sunflower: { name: "Sunflower", seasons: ["summer", "fall"], stages: [1, 2, 3, 2], seed: "sunflower_seed", produce: "sunflower", yield: 1, color: "#f6c63c", accent: "#6aa24a" },
   pumpkin: { name: "Pumpkin", seasons: ["fall"], stages: [1, 2, 3, 4, 3], seed: "pumpkin_seed", produce: "pumpkin", yield: 1, color: "#f08a2c", accent: "#5f9a4a" },
+  moonbloom: { name: "Moonbloom", seasons: ["winter"], stages: [2, 2, 3, 3], seed: "moonbloom_seed", produce: "moonbloom", yield: 1, color: "#e4dcff", accent: "#5f86a8" },
   cranberry: { name: "Cranberry", seasons: ["fall"], stages: [1, 1, 2, 1, 2], regrow: 5, seed: "cranberry_seed", produce: "cranberry", yield: 2, color: "#b8263e", accent: "#6a8a4a" },
 };
 
@@ -18,5 +19,5 @@ export const SHOP_SEEDS = [
   ["turnip_seed", "strawberry_seed"],
   ["tomato_seed", "sunflower_seed"],
   ["pumpkin_seed", "cranberry_seed", "sunflower_seed"],
-  [],
+  ["moonbloom_seed"],
 ];

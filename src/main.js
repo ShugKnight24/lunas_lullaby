@@ -15,6 +15,11 @@ import { addItem } from "./game/rules/inventory.js";
 import { rollWeather } from "./game/rules/weather.js";
 import { newState } from "./game/state.js";
 import { TILE } from "./game/config.js";
+import { TUTORIAL } from "./game/data/tutorial.js";
+import { createAudio } from "./engine/audio.js";
+import { createDirector } from "./game/audio/music.js";
+import { play } from "./game/audio/sfx.js";
+import { dayIndex } from "./game/rules/clock.js";
 
 const canvas = document.getElementById("game");
 const root = document.getElementById("ui");
@@ -31,6 +36,11 @@ const bindings = {
   journal: ["KeyJ"],
   friends: ["KeyR"],
   inventory: ["KeyI", "Tab"],
+  craft: ["KeyK"],
+  sprint: ["ShiftLeft", "ShiftRight"],
+  bike: ["KeyB"],
+  mute: ["KeyM"],
+  minimap: ["KeyN"],
   zoomIn: ["Equal", "NumpadAdd"],
   zoomOut: ["Minus", "NumpadSubtract"],
 };
@@ -41,6 +51,24 @@ const ui = createUI(root);
 const g = createGame(input, ui);
 g.renderMs = 0;
 ui.g = g;
+
+// Sound: browsers only allow audio after a gesture, so the first click or key starts it.
+g.audio = createAudio();
+const director = createDirector(g.audio);
+const unlock = () => g.audio.unlock() && (removeEventListener("pointerdown", unlock, true), removeEventListener("keydown", unlock, true));
+addEventListener("pointerdown", unlock, true);
+addEventListener("keydown", unlock, true);
+// A soft tick for every button in the DOM UI.
+root.addEventListener("pointerdown", (e) => e.target.closest?.("button") && play(g.audio, "ui"));
+const audioScene = () => ({
+  scene: g.mode === "title" ? "title" : ui.dreaming || g.mode === "summary" ? "dream" : "play",
+  day: dayIndex(g.s.clock),
+  season: g.s.clock.season,
+  min: g.s.clock.min,
+  weather: g.s.weather,
+  outdoor: !!g.lv?.outdoor,
+  talking: ui.isOpen(),
+});
 
 function title() {
   g.mode = "title";
@@ -56,6 +84,7 @@ ui.onQuit = title;
 startLoop(canvas, {
   update(dt, t) {
     update(g, dt, t);
+    director.update(dt, audioScene());
     input.endFrame();
   },
   render(ctx, view, t) {
@@ -74,7 +103,12 @@ window.__game = {
   get state() {
     return g.s;
   },
-  newGame: (profile) => (document.querySelector(".title, .creator")?.remove(), newGame(g, profile ?? newState().profile)),
+  /** `{ intro: false }` skips the intro and first-day tasks (for scripted checks). */
+  newGame(profile, { intro = true } = {}) {
+    document.querySelector(".title, .creator")?.remove();
+    newGame(g, profile ?? newState().profile);
+    if (!intro) (g.s.flags.intro = true), (g.s.tutorial = { step: TUTORIAL.length, done: true });
+  },
   continueGame: () => (document.querySelector(".title")?.remove(), continueGame(g)),
   teleport(tx, ty, level = "world", dir = "down") {
     g.lv = g.levels[level];
@@ -87,7 +121,13 @@ window.__game = {
   },
   face: (dir) => (g.player.dir = dir),
   select: (i) => (g.s.sel = i),
-  give: (id, n = 1) => addItem(g.s.inv, id, n),
+  /** Select the first bag slot holding `id`; returns the slot, or -1 (selection unchanged). */
+  selectItem(id) {
+    const i = g.s.inv.findIndex((x) => x?.id === id);
+    if (i >= 0) g.s.sel = i;
+    return i;
+  },
+  give: (id, n = 1, q = 0) => addItem(g.s.inv, id, n, q),
   use: () => ((g.player.useT = 0), retarget(g), useTool(g)),
   interact: () => (retarget(g), interact(g)),
   mount: () => toggleMount(g),
