@@ -5,6 +5,8 @@
  * rules/tutorial.js.
  */
 
+import { addLog } from "./rules/log.js";
+import { dayIndex } from "./rules/clock.js";
 import { ITEMS } from "./data/items.js";
 import { TUTORIAL, TUTORIAL_REWARD } from "./data/tutorial.js";
 import { INTRO } from "./data/dialogue.js";
@@ -68,11 +70,18 @@ export function updateProfessions(g) {
   });
 }
 
+/** Write a line in the adventure diary (Journal → Diary). */
+export function diary(g, text, kind = "event") {
+  g.s.log = addLog(g.s.log ?? [], dayIndex(g.s.clock), text, kind);
+}
+
 export function award(g, id, xp) {
   const r = gainXp(g.s.skills, id, xp);
   g.s.skills = r.skills;
   if (!r.levelUp) return;
   toast(g, `${SKILL_NAMES[id]} reached level ${r.levelUp}!`);
+  diary(g, `Reached ${SKILL_NAMES[id]} level ${r.levelUp}.`, "level");
+  if (id === "combat") toast(g, "+2 stat points! Spend them in your gear screen (C).");
   sfx(g, "levelUp");
   burst(FXK.SPARK, g.player.x, g.player.y - 50, 14, 90, 1, "#fff2a0");
   g.levelUp = { id, level: r.levelUp, t: 3 };

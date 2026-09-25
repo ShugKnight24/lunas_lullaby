@@ -9,10 +9,10 @@ import { TILE, CHUNK, BAKE_PX } from "../config.js";
 import { GR } from "./map.js";
 
 const PAL = [
-  { grass: "#a6d77c", g2: "#92c96c", g3: "#bfe597", forest: "#84bf66", field: "#c4a07a", path: "#ecd6a6", pathEdge: "#cdb087", sand: "#f3e0ae", water: "#74c1dc", deep: "#5eaed0", foam: "#e9f7f6", plaza: "#e2d8cf", grout: "#cfc2ba", dots: ["#ffffff", "#f7b3c8", "#fff2a0"] },
-  { grass: "#82c763", g2: "#6fb656", g3: "#9ad676", forest: "#63a955", field: "#bc9870", path: "#ead3a0", pathEdge: "#c9a97d", sand: "#f3dfa8", water: "#69bcdc", deep: "#52a6cf", foam: "#e6f7f6", plaza: "#e2d8cf", grout: "#cfc2ba", dots: ["#fff2a0", "#ffffff"] },
-  { grass: "#c9c46e", g2: "#d7aa5c", g3: "#bdb964", forest: "#b8994f", field: "#b48e68", path: "#e6cc9c", pathEdge: "#c4a47a", sand: "#eed8a4", water: "#6ab2cc", deep: "#5698bd", foam: "#e6f2f0", plaza: "#ddd2c8", grout: "#c9bcb3", dots: ["#e8763a", "#f0b040", "#c8502e"] },
-  { grass: "#edf3fa", g2: "#dde7f2", g3: "#ffffff", forest: "#e2eaf4", field: "#e6e0e2", path: "#e8dfd6", pathEdge: "#d2c8c2", sand: "#f3ede2", water: "#9cc8de", deep: "#88b8d4", foam: "#ffffff", plaza: "#e4e0e2", grout: "#c8c0c4", dots: ["#ffffff", "#cfe0f0"] },
+  { grass: "#a6d77c", g2: "#92c96c", g3: "#bfe597", moss: "#5f9e5a", forest: "#84bf66", field: "#c4a07a", path: "#ecd6a6", pathEdge: "#cdb087", sand: "#f3e0ae", water: "#74c1dc", deep: "#5eaed0", foam: "#e9f7f6", plaza: "#e2d8cf", grout: "#cfc2ba", dots: ["#ffffff", "#f7b3c8", "#fff2a0"] },
+  { grass: "#82c763", g2: "#6fb656", g3: "#9ad676", moss: "#4a8a4c", forest: "#63a955", field: "#bc9870", path: "#ead3a0", pathEdge: "#c9a97d", sand: "#f3dfa8", water: "#69bcdc", deep: "#52a6cf", foam: "#e6f7f6", plaza: "#e2d8cf", grout: "#cfc2ba", dots: ["#fff2a0", "#ffffff"] },
+  { grass: "#c9c46e", g2: "#d7aa5c", g3: "#bdb964", moss: "#8a7a44", forest: "#b8994f", field: "#b48e68", path: "#e6cc9c", pathEdge: "#c4a47a", sand: "#eed8a4", water: "#6ab2cc", deep: "#5698bd", foam: "#e6f2f0", plaza: "#ddd2c8", grout: "#c9bcb3", dots: ["#e8763a", "#f0b040", "#c8502e"] },
+  { grass: "#edf3fa", g2: "#dde7f2", g3: "#ffffff", moss: "#cfdce6", forest: "#e2eaf4", field: "#e6e0e2", path: "#e8dfd6", pathEdge: "#d2c8c2", sand: "#f3ede2", water: "#9cc8de", deep: "#88b8d4", foam: "#ffffff", plaza: "#e4e0e2", grout: "#c8c0c4", dots: ["#ffffff", "#cfe0f0"] },
 ];
 
 function hash(x, y, s) {
@@ -91,10 +91,13 @@ function paintWorld(g, lv, season, x0, y0, x1, y1) {
   // Forest floor: darker grass painted as soft blobs.
   g.fillStyle = p.forest;
   each(GR.FOREST, (px, py, x, y) => blob(g, G, GR.FOREST, x, y, px, py, 4, 14));
+  // Deep moss (the Wildwood): darker still.
+  g.fillStyle = p.moss;
+  each(GR.MOSS, (px, py, x, y) => blob(g, G, GR.MOSS, x, y, px, py, 5, 15));
   // Grass variation: overlapping soft blotches, tufts and seasonal dots.
   for (let y = y0 - 1; y <= y1; y++) for (let x = x0 - 1; x <= x1; x++) {
     const t = G(x, y);
-    if (t !== GR.GRASS && t !== GR.FOREST) continue;
+    if (t !== GR.GRASS && t !== GR.FOREST && t !== GR.MOSS) continue;
     const px = x * T;
     const py = y * T;
     for (let k = 0; k < 2; k++) {

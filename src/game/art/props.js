@@ -97,6 +97,22 @@ export function pineSprite(season, seed = 1) {
   return sprite(TREE_BOX, [L(trunk(30, 6) + groundTuft(season)), L(m, { anim: { type: "sway", pivot: [0, -10], amp: 0.014, speed: 1, phase: seed } })]);
 }
 
+/** Ironwood: a tall, near-black pine of the Wildwood thicket (chop it for ironwood). */
+export function ironwoodSprite(season, seed = 1) {
+  const g = season === 3 ? "#3e5c5e" : "#2f5452";
+  let m = "";
+  const tiers = [[-38, 44, 46], [-64, 36, 42], [-88, 26, 36], [-106, 16, 24]];
+  for (let i = 0; i < tiers.length; i++) {
+    const [y, w, h] = tiers[i];
+    const d = `M${-w} ${y}C${-w * 0.6} ${y - h * 0.3} -6 ${y - h + 4} 0 ${y - h}C6 ${y - h + 4} ${w * 0.6} ${y - h * 0.3} ${w} ${y}C${w * 0.5} ${y + 6} ${w * 0.25} ${y + 1} 0 ${y + 5}C${-w * 0.25} ${y + 1} ${-w * 0.5} ${y + 6} ${-w} ${y}Z`;
+    m += part(d, i === tiers.length - 1 ? lite(g, 0.1) : g, { s: 4, lo: dark(g, 0.35) });
+    m += line(`M${-w * 0.45} ${y - h * 0.25}Q-4 ${y - h * 0.62} -2 ${y - h + 8}`, 1.8, "#9fc8c0", 0.55);
+    if (season === 3) m += fill(`M${-w * 0.7} ${y - h * 0.22}C-8 ${y - h * 0.8} 8 ${y - h * 0.8} ${w * 0.7} ${y - h * 0.22}C${w * 0.3} ${y - h * 0.35} ${-w * 0.3} ${y - h * 0.3} ${-w * 0.7} ${y - h * 0.22}Z`, "#fbfdff", 0.95);
+  }
+  const bark = part("M-7 0C-6 -10 -5 -22 -5 -34L5 -34C5 -22 6 -10 7 0C10 3 -10 3 -7 0Z", "#5a4a4e", { s: 2.2 }) + line("M-2 -6V-28M2 -10V-30", 1, "#3a2e34", 0.8);
+  return sprite([-50, -134, 100, 140], [L(bark + groundTuft(season)), L(m, { anim: { type: "sway", pivot: [0, -10], amp: 0.01, speed: 0.8, phase: seed } })]);
+}
+
 export function stumpSprite() {
   return sprite([-20, -24, 40, 28], [L(part("M-9 0C-9 -6 -9 -12 -8 -14L8 -14C9 -12 9 -6 9 0C11 3 -11 3 -9 0Z", BARK, { s: 2 }) + part(ellD(0, -14, 8.5, 3.6), "#e8c08a", { s: 0.6 }) + line("M-4 -14.5a4 1.6 0 1 0 8 0", 0.9, dark("#e8c08a", 0.4)))]);
 }
@@ -165,6 +181,13 @@ export const BUILDINGS = {
   cabin: { w: 4, d: 3, wallH: 62, wall: "#a8c8e0", roof: "#4a6a8a", door: "#e8c86a", trim: "#fffaf0", planks: true },
   stable: { w: 5, d: 4, wallH: 70, wall: "#d0645a", roof: "#8a4040", door: null, trim: "#fff4ea", barn: true },
   coop: { w: 4, d: 3, wallH: 56, wall: "#f3d88a", roof: "#b0704a", door: "#8a5a3a", trim: "#fffaf0", coop: true },
+  lodge: { w: 6, d: 4, wallH: 72, wall: "#b8865a", roof: "#4f7a5a", door: "#6a4a32", trim: "#f4e2c4", planks: true, sign: "sword" },
+  store: { w: 6, d: 4, wallH: 72, wall: "#f6ecd4", roof: "#5a7ab8", door: "#e8c86a", trim: "#fffaf0", awning: ["#6a9ad8", "#fff8ec"], sign: "bag" },
+  ranch: { w: 6, d: 4, wallH: 72, wall: "#f8f4ee", roof: "#8a5a4a", door: "#c0584a", trim: "#fffaf0", chimney: true },
+  barn: { w: 6, d: 5, wallH: 84, wall: "#c8484a", roof: "#6a3a3a", door: null, trim: "#fff4ea", barn: true },
+  cottage: { w: 4, d: 3, wallH: 60, wall: "#d8c8ec", roof: "#7a5a9a", door: "#f2c46a", trim: "#fffaf0" },
+  cottage2: { w: 4, d: 3, wallH: 60, wall: "#cdeadb", roof: "#c07050", door: "#6a9ac8", trim: "#fffaf0" },
+  clinic: { w: 5, d: 4, wallH: 70, wall: "#fbf8f4", roof: "#3f9a9a", door: "#8ad0c8", trim: "#fffaf0", sign: "cross" },
 };
 
 export function buildingWindows(kind) {
@@ -202,6 +225,9 @@ function signM(kind, y) {
   let icon = "";
   if (kind === "bread") icon = part("M-8 4C-9 -3 -4 -6 0 -6C4 -6 9 -3 8 4Z", "#e0a060", { s: 1.2 }) + line("M-4 -3L-2 0M1 -4L3 -1", 1, "#9a6040");
   if (kind === "saw") icon = part("M-9 -3H6L9 3H-9Z", "#c4d0da", { s: 0.8 }) + part(rrD(-12, -5, 5, 8, 2), "#c98a4a", { s: 0.6 }) + line("M-5 3l1.5 -2l1.5 2l1.5 -2l1.5 2l1.5 -2l1.5 2", 0.8, INK);
+  if (kind === "sword") icon = part("M-9 3L5 -5L7 -3L-7 5Z", "#d8e2ea", { s: 0.6, w: 1.1 }) + part("M5 -5L9 -7L7 -3Z", "#d8e2ea", { s: 0, w: 1.1 }) + part(capD([-8, -1], [-4, 6], 2.6, 2.6), "#e8c86a", { s: 0.4, w: 1 }) + part(capD([-8, 4], [-11, 6], 2.4, 2.4), "#8a5a3a", { s: 0, w: 1 });
+  if (kind === "bag") icon = part("M-7 -2C-8 5 -5 6 0 6C5 6 8 5 7 -2C6 -5 -6 -5 -7 -2Z", "#d8b06a", { s: 1 }) + part("M-3 -4L-4 -7H4L3 -4Z", "#d8b06a", { s: 0.4, w: 1 }) + line("M-3.5 -4.2H3.5", 1.2, "#8a5a3a") + circle(0, 1.5, 2, "#f6d25a", { s: 0.4, w: 0.9 });
+  if (kind === "cross") icon = part("M-2.6 -7H2.6V-2.6H7V2.6H2.6V7H-2.6V2.6H-7V-2.6H-2.6Z", "#6ab85a", { s: 1 }) + hi(-1, -5, 0.8, 1.2, 0.6);
   return `<g transform="translate(0 ${y})">${part(rrD(-17, -10, 34, 18, 5), "#f6e2b8", { s: 1.4 })}${icon}</g>`;
 }
 

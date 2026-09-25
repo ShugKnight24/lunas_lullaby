@@ -4,7 +4,8 @@ import { VILLAGERS, VILLAGER_IDS } from "../../src/game/data/villagers.js";
 import { HEART_EVENTS, LINES, GIFT_LINES } from "../../src/game/data/dialogue.js";
 import { ITEMS } from "../../src/game/data/items.js";
 import { WAYPOINTS, INTERIORS, buildWorld } from "../../src/game/world/map.js";
-import { createWorldLevel, createInterior } from "../../src/game/world/level.js";
+import { createWorldLevel, createInterior, createOutdoorLevel } from "../../src/game/world/level.js";
+import { buildSunridge } from "../../src/game/world/sunridge.js";
 
 const sunnyMon = { weather: "sun", weekday: "Mon" };
 
@@ -34,7 +35,7 @@ describe("routines", () => {
 });
 
 describe("villager data", () => {
-  const levels = { world: createWorldLevel(buildWorld(7)) };
+  const levels = { world: createWorldLevel(buildWorld(7)), sunridge: createOutdoorLevel("sunridge", buildSunridge(23)) };
   for (const id in INTERIORS) levels[id] = createInterior(id);
 
   it("every schedule and routine names a waypoint you can stand on", () => {

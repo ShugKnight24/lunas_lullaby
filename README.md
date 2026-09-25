@@ -27,7 +27,9 @@ GitHub Actions runs the unit tests, the build and the Playwright specs on every 
 | Key | Action |
 | --- | --- |
 | WASD / arrows | Walk (or ride) |
-| Space / left click | Use the selected tool or seeds toward the tile you face |
+| Space / left click | Use the selected tool or seeds toward the tile you face (with an empty hand, swing your weapon). In the Wildwood it swings unless what you hold has work right there (an axe at ore, food, a salve). Use gear to put it on, the Squeaky Ball to throw it |
+| Q | Swing your equipped weapon at any time; press again mid-swing to chain slash → backslash → thrust; hold, then release when it sparkles, for a spin |
+| C | Gear and stats: equip and remove gear, spend stat points |
 | E / right click | Talk, give a gift, pet, ride, ship, harvest, forage, sleep, shop, build |
 | F | Mount / dismount the horse |
 | B | Hop on / off the bicycle (outdoors) |
@@ -35,7 +37,7 @@ GitHub Actions runs the unit tests, the build and the Playwright specs on every 
 | N | Show / hide the minimap |
 | Shift | Sprint |
 | 1–9 / mouse wheel | Choose hotbar slot |
-| J · R · I (Tab) · K | Journal · Friends tab · Bag tab · Craft tab |
+| J · R · I (Tab) · K | Journal (opens on the Diary) · Friends · Bag · Craft |
 | + / − | Zoom |
 | Esc | Pause (controls list, save, quit to title, skip first-day tasks) |
 | Click a hotbar slot | Select it |
@@ -71,6 +73,25 @@ After the dream comes a letter from Rowan, the farm's previous keeper, and Mira 
 - Get around faster: hold Shift to sprint, ride the horse (F), or craft a bicycle (Building 2) and press B.
 - The farm well beside the field refills the watering can (face it and press Space), as do the town well and any water.
 
+## The Wildwood, the town and Sunridge
+
+- **The Wildwood.** The arch at the top of the forest clearing (north of town) leads into an old forest with four zones: the Mossy Edge, the Bramble Thicket, Wisp Hollow and the Moon Shrine. Bramble Slimes hop and lunge, Thornback boars charge in straight lines (and are stunned when they hit a tree), Shroomlings puff spore clouds, and Gloom Wisps keep their distance and throw orbs. Creatures come back slowly while you're there; there are more at night. Chests (refilled weekly), ore stones (amber, iron, moonstone; break them with the axe), silverleaf and dark ironwood trees reward exploring.
+- **Combat.** Top-down action in the old Zelda style: a three-hit combo (slash, backslash, then a longer, harder thrust) with a small step into each swing, a charged spin, and a visible sword and smear. Hits flash creatures white and squash them, with impact stars, knockback, hit-stop, screen shake and popping damage numbers; you can still move slowly mid-swing. A Thornback about to charge paints its lane red on the ground. Health shows as hearts (10 each), with your weapon beside them, and grows with the Combat skill, Vigor, gear and your Adventurer rank. Food heals you as well as restoring energy, and sleeping heals fully. If you run out of health, Hazel carries you home: you lose 10% of your gold (500 at most) and two hours.
+- **The journal** (J) is a leather-bound book with coloured chapter tabs down its edge: Diary, Quests, Friends, Bag, Craft, your companion, Skills, Careers, Fish, Wishes and Farm. Each chapter opens on a hand-written title page. The **Diary** writes itself as you play (quests taken and finished, places found, first catches and harvests, friends met, level-ups, the boss) and you can add your own note to any day.
+- **Gear and stats** (C): what you wear shows on your character: helmets and hoods replace your hat, armour covers your top, boots swap your shoes, and your sword rides on your back until you swing it. five slots, Weapon, Head, Body, Feet and Charm. Gear comes off the bag when you wear it and goes back when you take it off, and the list compares every spare piece against what you're wearing. Better pieces need a Combat level. Hazel sells the basics; the rest is crafted from Wildwood loot (tusks, gel, wisp essence, ore, ironwood; Craft tab), found in rare chests, dropped now and then, or given as quest rewards. Each Combat level gives 2 stat points for Vigor (+8 health), Might (+1.5 attack), Guard (+1 defence) or Agility (+2% speed, +1% crit). Defence shaves every hit, never below 1.
+- **Your companion fights too.** They run at whatever is near you and bite, gain levels (Sniff at 3 barks near treasure, Guard Howl at 5 stuns creatures when you're hurt, Fetch at 8 pulls loot from further away), take damage, and get hungry overnight. A hungry or hurt companion won't fight: hold food or a Companion Treat and press E by them.
+- **Quests.** Hazel, the Warden (new Warden's Lodge east of Theo's), gives the Wildwood story: five quests ending at the Moon Shrine with the Gloomroot, a boss that erupts roots under you, throws orb volleys and summons slimes. Mira, Theo, Bram, Dale and Willow have side quests, and the notice board in the plaza posts three fresh jobs every morning. Journal → Quests tracks everything; the card at the top left shows the current goal.
+- **A bigger town.** Pip's General Store (south of the plaza) sells salves, treats, jerky and the Farm Stand, and buys almost anything on the spot. Two cottages and market stalls fill out the square.
+- **Sunridge.** The meadow road south of town runs to two working farms: Dale's Hawthorn Ranch (barn, silo, a pasture of cows and sheep; he sells milk, cheese and wool) and Willow's orchard and beehives (apples and honey from her stall).
+- **Careers** (Journal → Careers): Farmer, Adventurer, Merchant, Angler and Rancher, each with five ranks measured from how you play and a perk per rank. Merchants run a **Farm Stand**: place it on the farm, stock it with E, and villagers buy up to a nightly cap at a markup that grows with your rank.
+
+## Things to do besides farming
+
+- **Fetch.** New games start with a Squeaky Ball (Pip sells more). Hold it and press Space; your companion runs it back. It cheers them up (a few times a day) and gives them a little XP.
+- **Races.** The checkered flag by the stable starts the Hollow Loop: six gates through town and the meadow and back, on foot, by bike or on your horse. Bronze, silver and gold par times each pay once, and your best time is kept.
+- **Cooking.** Press E at the farmhouse hearth. Seven dishes from farm, ranch, orchard and Wildwood ingredients each give a buff for the rest of the day: half-energy tools, +attack, a wider fishing zone, +speed, +defence and health, energy that trickles back, or faster friendships.
+- **Starter quests** point you at the skills: Mira (Seeds of Something: harvest five crops), Theo (A Proper Fence: build six things from his board, lumber included) and Juniper (Three Quiet Casts). Journal → Skills says how every skill is trained.
+
 ## Layout
 
 ```
@@ -84,13 +105,15 @@ src/game/actions.js        tool use, E interactions, gifts/talk, mounting
 src/game/progress.js       intro scene, skill XP awards, tutorial steps
 src/game/build.js          build mode: ghost, place/move/remove, fence masks
 src/game/fishing.js        cast → bite → timing-bar fishing (fish picked from data/fish.js)
+src/game/combat.js         swings, creature populations, projectiles, the boss, companion fighting, drops, faint
+src/game/quests.js         quest offers and turn-ins in conversation, the notice board
 src/game/render.js         frame composition, y-sort, day/night grade, glows, build ghost
 src/game/rules/            pure rules (tested): clock, crops, inventory, shipping, quality, fishing, skills, tutorial, relationships, structures, animals, weather, dialogue, day
 src/game/data/             items, crops, fish, structures, villagers, dialogue (incl. intro), tutorial, forage tables
 src/game/art/              cozy-kit (ink/cel primitives), person, animals, crops, props, icons, sprite registry
-src/game/world/            map layout, levels/collision, ground baking, camera, lighting, weather/fx, pathfinding
-src/game/actors/           player, pet, horse, villagers, chickens
-src/game/ui/               canvas HUD, DOM panels (dialogue, shop, build, journal, pause, summary), title + creator
+src/game/world/            map layout (plus wildwood.js, sunridge.js), levels/collision, ground baking, camera, lighting, weather/fx, pathfinding
+src/game/actors/           player, pet, horse, villagers, chickens, enemies (Wildwood AI), herd (Sunridge animals)
+src/game/ui/               canvas HUD, DOM panels (dialogue, build, journal, pause, summary), rpg-panels (shops, board, stand, quests, careers), title + creator
 tests/unit/                vitest suites for the rules and save migrations
 tests/e2e/                 playwright specs driving window.__game
 ```
@@ -118,4 +141,4 @@ People and pets are built from their creator parameters and cached under a hash 
 
 ## Debug hooks
 
-`window.__game` exposes the runtime (`g`, `state`) and helpers for scripted checks: `newGame(profile, { intro: false })`, `teleport(tx, ty, level, dir)`, `select` (slot index), `selectItem(id)`, `give`, `use`, `interact`, `mount`, `setTime`, `setSeason`, `setWeather`, `sleep`, `save`, `openBuild`, `place`, `hover`, `query`.
+`window.__game` exposes the runtime (`g`, `state`) and helpers for scripted checks: `newGame(profile, { intro: false })`, `teleport(tx, ty, level, dir)`, `select` (slot index), `selectItem(id)`, `give`, `use`, `interact`, `mount`, `setTime`, `setSeason`, `setWeather`, `sleep`, `save`, `openBuild`, `place`, `hover`, `query`, `step(frames)` (run the simulation synchronously), `spawn(type, tx, ty)` and `clearEnemies()`.

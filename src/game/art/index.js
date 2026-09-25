@@ -9,6 +9,8 @@ import * as P from "./props.js";
 import { cropSprite, soilSprite } from "./crops-art.js";
 import { iconSprite } from "./icons.js";
 import { petSprite, horseSprite, chickenSprite } from "./animals.js";
+import * as Wd from "./wild.js";
+import { fieldCrop } from "../world/sunridge.js";
 import { CROPS } from "../data/crops.js";
 import { STRUCTURES } from "../data/structures.js";
 
@@ -36,6 +38,9 @@ export function resolveObject(o, season) {
       if (o.stump) {
         key = "stump";
         build = P.stumpSprite;
+      } else if (o.variant === "ironwood") {
+        key = `ironwood:${season === 3 ? 3 : 0}:${seed}`;
+        build = () => P.ironwoodSprite(season === 3 ? 3 : 0, seed + 1);
       } else if (o.variant === "pine") {
         key = `pine:${season}:${seed}`;
         build = () => P.pineSprite(season, seed + 1);
@@ -107,6 +112,73 @@ export function resolveObject(o, season) {
       key = `fence:${o.mask ?? 0}:${season === 3 ? 3 : 0}`;
       build = () => P.fenceSprite(o.mask ?? 0, season === 3 ? 3 : 0);
       break;
+    case "shrine":
+      key = `shrine:${o.cleansed ? 1 : 0}`;
+      build = () => Wd.shrineSprite(!!o.cleansed);
+      break;
+    case "arch":
+      key = "arch";
+      build = Wd.archSprite;
+      break;
+    case "chest":
+      key = `chest:${o.open ? 1 : 0}:${o.rare ? 1 : 0}`;
+      build = () => Wd.chestSprite(!!o.open, !!o.rare);
+      break;
+    case "ore":
+      key = `ore:${o.ore}`;
+      build = () => Wd.oreSprite(o.ore);
+      break;
+    case "herb":
+      key = "herb";
+      build = Wd.herbSprite;
+      break;
+    case "stall":
+      key = `stall:${o.color}`;
+      build = () => Wd.stallSprite(o.color);
+      break;
+    case "raceflag":
+      key = "raceflag";
+      build = Wd.raceFlagSprite;
+      break;
+    case "questboard":
+      key = "questboard";
+      build = Wd.questBoardSprite;
+      break;
+    case "shopsign":
+      key = "board";
+      build = P.boardSprite;
+      break;
+    case "silo":
+      key = "silo";
+      build = Wd.siloSprite;
+      break;
+    case "trough":
+      key = "trough";
+      build = Wd.troughSprite;
+      break;
+    case "haybale":
+      key = "haybale";
+      build = Wd.hayBaleSprite;
+      break;
+    case "beehive":
+      key = "beehive";
+      build = Wd.beehiveSprite;
+      break;
+    case "appletree":
+      key = `apple:${season}:${seed}`;
+      build = () => Wd.appleTreeSprite(season, seed + 1);
+      break;
+    case "decocrop": {
+      const id = fieldCrop(o.i, season);
+      if (!id) {
+        o.key = "";
+        o.spr = null;
+        return;
+      }
+      o.key = cropKey(id, 4);
+      o.spr = cropSpr(id, 4);
+      return;
+    }
     case "structure":
       return resolveStructure(o, season);
     case "furniture":
@@ -145,6 +217,9 @@ function resolveStructure(o, season) {
   } else if (t === "well") {
     key = `well:${s}`;
     build = () => P.wellSprite(s);
+  } else if (t === "farm_stand") {
+    key = `stand:${o.busy ? 1 : 0}`;
+    build = () => Wd.farmStandSprite(!!o.busy);
   } else if (t === "preserves_jar" || t === "mayo_machine") {
     key = `${t}:${o.busy ? 1 : 0}`;
     build = () => (t === "preserves_jar" ? P.preservesJarSprite : P.mayoMachineSprite)(!!o.busy);
@@ -163,6 +238,11 @@ function resolveFurniture(o) {
     const c = o.c ?? "#e8a0b0";
     o.key = `rug:${c}`;
     o.spr = sprite(o.key, () => P.rugSprite(80, 56, c));
+    return;
+  }
+  if (o.name === "counter" && o.bread === false) {
+    o.key = "furn:counter:plain";
+    o.spr = sprite(o.key, () => P.counterSprite(false));
     return;
   }
   o.key = `furn:${o.name}`;
@@ -184,3 +264,33 @@ export const petSpr = (kind, coat, frame) => sprite(`pet:${kind}:${coat}:${frame
 export const horseSpr = (dir, frame) => sprite(`horse:${dir}:${frame}`, () => horseSprite(dir, frame));
 export const chickenSpr = (frame) => sprite(`chick:${frame}`, () => chickenSprite(frame));
 export const sparkleSpr = () => sprite("sparkle", P.sparkleSprite);
+
+// ── Wildwood creatures and Sunridge animals ──
+// Records `{ key, spr }` memoised per type/dir/frame, so drawing builds no strings per frame.
+const SLIME_COL = { slime: "#7cc86a", slime_violet: "#b08ad8" };
+const ES = new Map();
+function buildEnemy(type, dir, frame, enraged) {
+  if (type === "boar") return Wd.boarSprite(dir, frame);
+  if (type === "shroom") return Wd.shroomSprite(frame);
+  if (type === "wisp") return Wd.wispSprite(frame);
+  if (type === "gloomroot") return Wd.gloomrootSprite(frame, enraged);
+  return Wd.slimeSprite(SLIME_COL[type] ?? "#7cc86a", frame);
+}
+/** Sprite record for a creature; `dir` is "side" | "down" | "up" (only boars turn). */
+export function enemySpr(type, dir, frame, enraged = false) {
+  let byType = ES.get(type);
+  if (!byType) ES.set(type, (byType = {}));
+  const d = type === "boar" ? dir : "side";
+  const k = enraged ? frame + 8 : frame;
+  const row = (byType[d] ??= []);
+  if (!row[k]) {
+    const key = `enemy:${type}:${d}:${frame}:${enraged ? 1 : 0}`;
+    row[k] = { key, spr: sprite(key, () => buildEnemy(type, d, frame, enraged)) };
+  }
+  return row[k];
+}
+const PS = {};
+export const projSpr = (kind) => (PS[kind] ??= { key: `proj:${kind}`, spr: sprite(`proj:${kind}`, () => Wd.projectileSprite(kind)) });
+const AS = { cow: [], sheep: [] };
+/** Ranch animals: `kind` "cow" | "sheep". */
+export const animalSpr = (kind, frame) => (AS[kind][frame] ??= { key: `${kind}:${frame}`, spr: sprite(`${kind}:${frame}`, () => (kind === "cow" ? Wd.cowSprite : Wd.sheepSprite)(frame)) });

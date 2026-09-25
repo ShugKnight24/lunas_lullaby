@@ -62,4 +62,55 @@ export const VILLAGERS = {
   },
 };
 
-export const VILLAGER_IDS = ["mira", "theo", "juniper", "bram"];
+// ── Newer neighbours: the Warden, the shopkeeper, and the Sunridge farmers ──
+Object.assign(VILLAGERS, {
+  hazel: {
+    name: "Hazel",
+    role: "Warden",
+    look: { skin: 2, hair: "ponytail", hairColor: "#c0472f", eyes: "#3f8a5a", top: "#4a8a6a", bottom: "#6b4230", hat: "none" },
+    loves: ["amber", "moonstone", "trail_jerky", "wisp_essence"],
+    likes: ["boar_tusk", "mushroom", "blackberry", "apple", "bread"],
+    dislikes: ["slime_gel", "hay", "turnip"],
+    schedule: [[0, "lodge_in"], [480, "lodge_porch"], [600, "wild_arch"], [900, "lodge_in"], [1080, "plaza_board"], [1200, "lodge_door"], [1230, "lodge_in"]],
+    routines: {
+      rain: [[0, "lodge_in"]],
+      // Sundays she walks the Wildwood edge all day.
+      Sun: [[0, "lodge_in"], [420, "wild_arch"], [1140, "lodge_door"], [1170, "lodge_in"]],
+    },
+  },
+  pip: {
+    name: "Pip",
+    role: "Shopkeeper",
+    look: { skin: 0, hair: "curly", hairColor: "#e8c170", eyes: "#3f6fb0", top: "#f6c86a", bottom: "#5a6e9a", hat: "none", apron: "#7cbfd8" },
+    loves: ["honey", "cheese", "gloom_heart", "star_shard"],
+    likes: ["egg", "milk", "wool", "apple", "strawberry", "mayonnaise"],
+    dislikes: ["slime_gel", "fiber", "spore_cap"],
+    schedule: [[0, "store_in"], [1080, "store_door"], [1110, "plaza_bench"], [1200, "store_door"], [1230, "store_in"]],
+    routines: {
+      // Saturday market: Pip runs the stall by the plaza.
+      Sat: [[0, "store_in"], [480, "store_stall"], [1020, "store_door"], [1050, "store_in"]],
+    },
+  },
+  dale: {
+    name: "Dale",
+    role: "Rancher",
+    look: { skin: 4, hair: "short", hairColor: "#3a2a2a", eyes: "#6a3f2a", top: "#c0472f", bottom: "#5a6e9a", hat: "straw", beard: true },
+    loves: ["pumpkin", "cheese", "trail_jerky"],
+    likes: ["hay", "apple", "bread", "egg", "wool"],
+    dislikes: ["spore_cap", "slime_gel"],
+    schedule: [[0, "ranch_yard"], [420, "ranch_pasture"], [720, "ranch_sign"], [840, "ranch_barn"], [1020, "ranch_yard"]],
+    routines: { rain: [[0, "ranch_barn"]] },
+  },
+  willow: {
+    name: "Willow",
+    role: "Orchard Keeper",
+    look: { skin: 1, hair: "long", hairColor: "#6b4230", eyes: "#7a4fa0", top: "#9fd08a", bottom: "#8a5a44", hat: "flower" },
+    loves: ["honey", "sunflower", "cranberry", "silverleaf"],
+    likes: ["apple", "strawberry", "blackberry", "salmonberry", "egg"],
+    dislikes: ["spore_cap", "stone"],
+    schedule: [[0, "willow_home"], [480, "orchard_rows"], [720, "orchard_stall"], [960, "orchard_hives"], [1140, "willow_home"]],
+    routines: { rain: [[0, "willow_home"], [600, "orchard_stall"], [960, "willow_home"]] },
+  },
+});
+
+export const VILLAGER_IDS = ["mira", "theo", "juniper", "bram", "hazel", "pip", "dale", "willow"];

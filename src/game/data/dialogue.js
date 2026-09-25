@@ -45,6 +45,44 @@ export const LINES = {
     { t: "In winter the moon hangs low over the Hollow. Rowan used to say it's listening.", season: 3 },
     { t: "Rain on the bakery windows. Mira hums along without noticing.", weather: "rain" },
     { t: "You've got Rowan's patience, {name}. The farm can tell.", min: 3 },
+    { t: "The Wildwood wasn't always dark. The shrine up north used to sing it to sleep." },
+  ],
+  hazel: [
+    { t: "Hazel, Warden of the Wildwood. If you hear something growling past the clearing, that's my department.", max: 0 },
+    { t: "Keep something to eat in your bag when you go in. Salves too, if Pip has them." },
+    { t: "A slime bounces before it lunges. Watch for the squash." },
+    { t: "Hold your swing, let it sparkle, then let go. Spins clear a crowd." },
+    { t: "Spring means new slimes. They're almost cute. Almost.", season: 0 },
+    { t: "The thicket's thick with boars in summer. Stay near a tree.", season: 1 },
+    { t: "Wisps love long autumn nights.", season: 2 },
+    { t: "Snow shows tracks. Best season for a warden.", season: 3 },
+    { t: "{pet} fought like a champion out there. Feed them well.", min: 2 },
+  ],
+  pip: [
+    { t: "Welcome to Pip's! Salves, treats, snacks, and I'll buy almost anything you drag in.", max: 0 },
+    { t: "Want to sell for yourself? A Farm Stand on your land sells overnight. I carry them." },
+    { t: "Saturday market day! I set up the blue stall by the plaza.", season: 0 },
+    { t: "Business is a garden, {name}. You water it every day.", min: 2 },
+    { t: "Rain's good for business. Everyone comes in to dry off.", weather: "rain" },
+    { t: "Summer lemonade money pays for winter.", season: 1 },
+  ],
+  dale: [
+    { t: "Dale. Hawthorn Ranch. You're the one who took on Rowan's place? Good. Land shouldn't sit empty.", max: 0 },
+    { t: "Milk, cheese, wool. Honest work. Sign by the house if you want to buy." },
+    { t: "Calves come in spring. Nothing like it.", season: 0 },
+    { t: "Hay's the whole year's worry. Cut it while it's dry.", season: 1 },
+    { t: "Sheep get fluffy for winter. So do I.", season: 3 },
+    { t: "Wet cows are grumpy cows.", weather: "rain" },
+    { t: "You've got good hands for ranching, {name}. Think about it.", min: 2 },
+  ],
+  willow: [
+    { t: "Hi! I'm Willow. The orchard, the bees, the stall by the road, all mine. Well, the bees are theirs.", max: 0 },
+    { t: "An apple a day keeps the energy up. Grab one at my stall." },
+    { t: "Blossom week! Walk the rows before it's gone.", season: 0 },
+    { t: "The bees are loud today. That means sweet honey.", season: 1 },
+    { t: "Apple season! My arms hurt in the best way.", season: 2 },
+    { t: "The trees are asleep. I talk to them anyway.", season: 3 },
+    { t: "Your farm's got such good energy, {name}. The bees agree.", min: 2 },
   ],
 };
 
@@ -53,6 +91,10 @@ export const GIFT_LINES = {
   theo: { love: "Now that's quality. You've got a good eye.", like: "Appreciate it, friend.", neutral: "Huh. Thanks.", dislike: "...What am I meant to do with this?" },
   juniper: { love: "...! This is my favourite. How did you know?", like: "Nice. Thank you.", neutral: "Thanks.", dislike: "Hm. Not really my thing." },
   bram: { love: "Oh my. This takes me back fifty years. Thank you, child.", like: "How kind. I'll tell Mira you spoil me.", neutral: "Well now, thank you.", dislike: "Ah. I'll... find a use for it." },
+  hazel: { love: "Now THAT is a proper find. Thank you.", like: "Useful. Thanks.", neutral: "Oh. Thanks.", dislike: "I spend all day scraping this stuff off my boots." },
+  pip: { love: "Oh, this will fly off the shelf! No, no, I'm keeping it.", like: "Ooh, lovely stock. Thank you!", neutral: "Thanks, friend!", dislike: "I'll... put it in the bargain bin." },
+  dale: { love: "Well, now. That's kind. Really kind.", like: "Appreciated.", neutral: "Thanks.", dislike: "Hm. Not for me." },
+  willow: { love: "Ahh! The bees will be so jealous. Thank you!", like: "Aw, thank you!", neutral: "Oh, thanks!", dislike: "Oh no. Keep that away from my trees." },
 };
 
 /**
@@ -119,6 +161,57 @@ export const HEART_EVENTS = {
     },
   ],
 };
+
+Object.assign(HEART_EVENTS, {
+  hazel: [
+    {
+      hearts: 2,
+      lines: [
+        "Hazel is sharpening a blade on the lodge porch.",
+        "\"I grew up in the Wildwood's shadow. My mother was warden before me. She said the wood isn't wicked, just scared.\"",
+        "\"Take these. For the scared ones that bite anyway.\"",
+      ],
+      reward: "healing_salve",
+      n: 4,
+    },
+  ],
+  pip: [
+    {
+      hearts: 2,
+      lines: [
+        "Pip is counting coins into little paper towers.",
+        "\"My first shop was a crate by the road. I sold three apples and a rock with a face on it. Best day of my life.\"",
+        "\"Here's a crate of treats for your partner. Good customers get spoiled.\"",
+      ],
+      reward: "pet_treat",
+      n: 4,
+    },
+  ],
+  dale: [
+    {
+      hearts: 2,
+      lines: [
+        "Dale leans on the pasture fence, watching the herd.",
+        "\"Rowan and I raised our first calves the same spring. Traded milk for turnips for years.\"",
+        "\"Here. Neighbours look after neighbours.\"",
+      ],
+      reward: "cheese",
+      n: 3,
+    },
+  ],
+  willow: [
+    {
+      hearts: 2,
+      lines: [
+        "Willow is sitting under the oldest apple tree with a jar of honey.",
+        "\"This tree was here before the orchard. Before the town, maybe. I think it planted the rest.\"",
+        "\"Have some honey. The bees said it's okay.\"",
+      ],
+      reward: "honey",
+      n: 3,
+    },
+  ],
+});
 
 /**
  * New-game intro: a letter from Rowan, the farm's previous keeper, then Mira

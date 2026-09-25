@@ -13,7 +13,8 @@ import { fishPool, pickFish, barParams, catchQuality, logCatch } from "./rules/f
 import { QUALITY } from "./rules/quality.js";
 import { toolEnergy, fishingZone, XP, has } from "./rules/skills.js";
 import { countItem } from "./rules/inventory.js";
-import { award, level } from "./progress.js";
+import { award, level, diary } from "./progress.js";
+import { questEvent, buffNow } from "./combat.js";
 import { sfx } from "./audio/sfx.js";
 import { give } from "./actions.js";
 import { removeItem } from "./rules/inventory.js";
@@ -45,7 +46,7 @@ export function startFishing(g) {
   const s = g.s;
   const pool = fishPool(FISH, { where: waterKind(Math.floor(f.bx / TILE), Math.floor(f.by / TILE)), season: s.clock.season, min: s.clock.min, weather: s.weather });
   f.fish = pickFish(pool, Math.random());
-  const bar = barParams(f.fish ? FISH[f.fish].diff : 0, fishingZone(level(g, "fishing")));
+  const bar = barParams(f.fish ? FISH[f.fish].diff : 0, fishingZone(level(g, "fishing")) + (buffNow(g)?.fish ?? 0));
   f.wait = 1.2 + Math.random() * 2.4 + (f.fish ? 0 : 2.5);
   // Bait in the bag is used up one per cast and halves the wait.
   f.bait = f.fish && removeItem(s.inv, "bait", 1);
@@ -111,8 +112,9 @@ export function updateFishing(g, dt) {
       else if (give(g, f.fish, 1, f.bx, f.by, q)) {
         const first = !g.s.fishLog[f.fish];
         g.s.fishLog = logCatch(g.s.fishLog, f.fish, q);
+        questEvent(g, { act: "fish" });
         award(g, "fishing", XP.catch(FISH[f.fish].diff, q));
-        if (first) toast(g, `New fish for your log: ${FISH[f.fish].name}!`, f.fish);
+        if (first) toast(g, `New fish for your log: ${FISH[f.fish].name}!`, f.fish), diary(g, `Caught my first ${FISH[f.fish].name}.`, "fish");
         else if (q === 2) toast(g, "Perfect catch!");
         burst(FXK.SPLASH, f.bx, f.by, 12, 90, 0.7, "#cfeeff");
         sfx(g, "catch");
