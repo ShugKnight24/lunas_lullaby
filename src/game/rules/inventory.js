@@ -8,7 +8,7 @@
 import { MAX_STACK } from "../config.js";
 import { ITEMS } from "../data/items.js";
 
-const stackable = (id) => ITEMS[id]?.kind !== "tool";
+const stackable = (id) => ITEMS[id]?.kind !== "tool" && ITEMS[id]?.kind !== "weapon";
 
 /** Add n of id at quality q, filling existing stacks first. Returns the leftover count. */
 export function addItem(inv, id, n = 1, q = 0) {

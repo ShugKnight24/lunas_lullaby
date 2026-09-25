@@ -7,16 +7,20 @@
 import { createSave, migrateChain } from "../engine/save.js";
 import { newCoop } from "./rules/animals.js";
 import { newSkills } from "./rules/skills.js";
+import { maxHp, newPetStats } from "./rules/combat.js";
+import { newQuests } from "./rules/quests.js";
+import { newEquip, newAttrs } from "./rules/equipment.js";
+import { ITEMS } from "./data/items.js";
 import { footprint } from "./rules/structures.js";
 import { STRUCTURES } from "./data/structures.js";
 import { INV_SIZE, MAX_ENERGY, CAN_CAPACITY, START_GOLD, TILE, MAP_W } from "./config.js";
-import { newClock } from "./rules/clock.js";
+import { newClock, dayIndex } from "./rules/clock.js";
 import { newRel } from "./rules/relationships.js";
 import { addItem } from "./rules/inventory.js";
 import { VILLAGER_IDS } from "./data/villagers.js";
 import { PLAYER_START, HORSE_START, FARM_WELL } from "./world/map.js";
 
-export const SAVE_VERSION = 9;
+export const SAVE_VERSION = 12;
 
 /** `MIGRATIONS[n]` upgrades a v(n) save to v(n+1). */
 export const MIGRATIONS = {
@@ -45,6 +49,33 @@ export const MIGRATIONS = {
   },
   // v9: the Building skill.
   8: (d) => ({ ...d, skills: { ...newSkills(), ...d.skills } }),
+  // v10: the Wildwood: health, the Combat skill, a companion who levels up,
+  // quests, the adventurers' guild, new neighbours and per-level object state.
+  9: (d) => ({
+    ...d,
+    hp: maxHp(0),
+    skills: { ...newSkills(), ...d.skills },
+    pet: { ...newPetStats(), ...d.pet },
+    quests: newQuests(),
+    guild: 0,
+    lvobjs: {},
+    stats: { standSales: 0, kills: {}, ...d.stats },
+    rel: { ...Object.fromEntries(VILLAGER_IDS.map((id) => [id, { ...newRel(), met: false }])), ...d.rel },
+  }),
+  // v11: equipment slots and stat points; the best sword in the bag is put on.
+  10: (d) => {
+    const inv = d.inv.map((x) => x && { ...x });
+    const equip = newEquip();
+    let best = -1;
+    inv.forEach((x, i) => x && ITEMS[x.id]?.kind === "weapon" && (best < 0 || ITEMS[x.id].dmg > ITEMS[inv[best].id].dmg) && (best = i));
+    if (best >= 0) {
+      equip.weapon = inv[best].id;
+      inv[best] = null;
+    }
+    return { ...d, inv, equip, attrs: newAttrs() };
+  },
+  // v12: the adventure diary starts on the day you open it.
+  11: (d) => ({ ...d, log: [{ d: dayIndex(d.clock), t: `Started keeping a journal of life on ${d.profile.farm}.`, k: "event" }] }),
 };
 
 /** Remove structures and soil on the farm well's paving, refunding what was built. */
@@ -81,6 +112,7 @@ export function newState(profile = DEFAULT_PROFILE, seed = 7) {
   for (const id of ["hoe", "can", "axe", "scythe", "rod"]) addItem(inv, id, 1);
   addItem(inv, "turnip_seed", 15);
   addItem(inv, "strawberry_seed", 3);
+  addItem(inv, "squeaky_ball", 1);
   const rel = {};
   for (const id of VILLAGER_IDS) rel[id] = { ...newRel(), met: false };
   return {
@@ -100,14 +132,21 @@ export function newState(profile = DEFAULT_PROFILE, seed = 7) {
     objs: {},
     forage: {},
     rel,
-    pet: { happy: 40, petted: -1 },
+    pet: { happy: 40, petted: -1, ...newPetStats() },
+    hp: maxHp(0),
+    quests: newQuests(),
+    guild: 0,
+    lvobjs: {},
+    equip: newEquip(),
+    attrs: newAttrs(),
+    log: [{ d: 0, t: `Arrived at ${profile.farm} with ${profile.pet.name}. Everything smells like rain and new beginnings.`, k: "event" }],
     bin: [],
     flags: { found: {}, intro: false, finale: false },
     dreams: {},
     skills: newSkills(),
     professions: {},
     tutorial: { step: 0, done: false },
-    stats: { earned: 0, shippedDays: 0, harvested: {} },
+    stats: { earned: 0, shippedDays: 0, harvested: {}, standSales: 0, kills: {} },
     fishLog: {},
     uid: 1,
   };

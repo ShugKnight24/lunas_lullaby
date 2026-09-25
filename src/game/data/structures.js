@@ -27,6 +27,8 @@ export const STRUCTURES = {
 STRUCTURES.preserves_jar = { name: "Preserves Jar", w: 1, h: 1, cost: {}, item: "preserves_jar", desc: "Turns a crop into jam." };
 STRUCTURES.mayo_machine = { name: "Mayo Machine", w: 1, h: 1, cost: {}, item: "mayo_machine", desc: "Turns an egg into mayonnaise." };
 
+STRUCTURES.farm_stand = { name: "Farm Stand", w: 2, h: 1, cost: {}, item: "farm_stand", desc: "Your own shop: villagers buy what you stock overnight." };
+
 export const BUILD_ORDER = ["fence", "fence_gate", "fence_rustic", "fence_white", "fence_stone", "fence_hedge", "path", "planter", "lamp", "bench", "scarecrow", "sprinkler", "coop", "well"];
 
 /** Paint colours for fences that take paint (null = natural). */

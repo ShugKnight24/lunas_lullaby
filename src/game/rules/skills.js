@@ -1,11 +1,11 @@
 /**
- * Skills: farming, foraging, fishing, ranching and building, each 0..10 from total XP
+ * Skills: farming, foraging, fishing, ranching, building and combat, each 0..10 from total XP
  * (`s.skills[id]`). Every level trims the energy its tools cost, and each
  * skill has one signature perk (see PERKS).
  */
 
-export const SKILLS = ["farming", "foraging", "fishing", "ranching", "building"];
-export const SKILL_NAMES = { farming: "Farming", foraging: "Foraging", fishing: "Fishing", ranching: "Ranching", building: "Building" };
+export const SKILLS = ["farming", "foraging", "fishing", "ranching", "building", "combat"];
+export const SKILL_NAMES = { farming: "Farming", foraging: "Foraging", fishing: "Fishing", ranching: "Ranching", building: "Building", combat: "Combat" };
 /** Total XP needed for levels 1..10. */
 export const LEVEL_XP = [100, 380, 770, 1300, 2150, 3300, 4800, 6900, 10000, 15000];
 export const MAX_LEVEL = LEVEL_XP.length;
@@ -19,6 +19,17 @@ export const PERKS = {
   fishing: "A wider green zone when reeling",
   ranching: "Petting builds more affection",
   building: "Builds need fewer materials; from level 6 you build it yourself, with no gold fee",
+  combat: "+5 max health and +1 sword damage per level",
+};
+
+/** How each skill is trained (shown on the Skills page). */
+export const HOW = {
+  farming: "Harvest crops: pricier crops give more. Till, plant and water on your field, then pick with E or the scythe.",
+  foraging: "Pick up wild forage (the sparkles), chop trees, and break ore stones in the Wildwood.",
+  fishing: "Cast into the river, pond or hidden pool. Harder fish and better catches give more.",
+  ranching: "Build a Chicken Coop at Theo's board, pet your hens every day and collect their eggs.",
+  building: "Build from Theo's board by the carpenter shop (fences, paths, lamps, coops), and craft things in the Craft tab.",
+  combat: "Defeat creatures in the Wildwood, north through the arch above town.",
 };
 
 export const newSkills = () => Object.fromEntries(SKILLS.map((id) => [id, 0]));
@@ -56,6 +67,8 @@ export const XP = {
   tree: 10,
   egg: 5,
   petHen: 5,
+  /** Combat: by the creature's worth. */
+  kill: (xp) => xp,
   /** Building: by how much went into it. */
   build: (cost) => 2 + Math.round(((cost.wood ?? 0) + (cost.stone ?? 0)) / 3 + (cost.gold ?? 0) / 40),
   craft: (ingredients) => 4 + Math.round(Object.values(ingredients).reduce((a, b) => a + b, 0) / 3),
@@ -95,6 +108,10 @@ export const PROFESSIONS = {
   building: [
     { id: "carpenter", name: "Carpenter", desc: "Everything you build takes a quarter less wood and stone." },
     { id: "tinkerer", name: "Tinkerer", desc: "Machines finish a night sooner." },
+  ],
+  combat: [
+    { id: "duelist", name: "Duelist", desc: "Your sword hits 15% harder." },
+    { id: "beastfriend", name: "Beastfriend", desc: "Your companion bites 30% harder and takes half damage." },
   ],
 };
 
