@@ -88,6 +88,39 @@ export const SFX = {
   ui: (a) => a.tone({ freq: vary(900), dur: 0.04, gain: 0.05, type: "triangle", release: 0.03 }),
   error: (a) => a.tone({ freq: 220, to: 180, dur: 0.14, gain: 0.08, type: "triangle" }),
   step: (a) => a.noise({ dur: 0.05, gain: 0.035, type: "lowpass", freq: vary(700, 0.2), to: 250 }),
+  // Combat
+  swing: (a) => a.noise({ dur: 0.16, gain: 0.16, type: "bandpass", freq: vary(1800), to: 3600, q: 1.4, attack: 0.02 }),
+  spin: (a) => {
+    a.noise({ dur: 0.4, gain: 0.2, type: "bandpass", freq: 900, to: 4200, q: 1.2, attack: 0.04 });
+    notes(a, [79, 86], 0.08, { gain: 0.07, dur: 0.25 });
+  },
+  thrust: (a) => {
+    a.noise({ dur: 0.2, gain: 0.2, type: "bandpass", freq: 1200, to: 5200, q: 2, attack: 0.01 });
+    a.tone({ freq: vary(180), to: 90, dur: 0.12, gain: 0.12, type: "triangle" });
+  },
+  charged: (a) => notes(a, [91, 96], 0.05, { gain: 0.06, dur: 0.2 }),
+  hit: (a) => {
+    a.tone({ freq: vary(210), to: 90, dur: 0.1, gain: 0.26, type: "triangle" });
+    a.noise({ dur: 0.07, gain: 0.2, freq: vary(2200), q: 1.5 });
+  },
+  squish: (a) => a.tone({ freq: vary(380), to: 140, dur: 0.14, gain: 0.18, type: "sine" }),
+  defeat: (a) => {
+    a.noise({ dur: 0.25, gain: 0.16, type: "lowpass", freq: 1600, to: 200 });
+    notes(a, [84, 79], 0.06, { type: "triangle", gain: 0.08, dur: 0.18 });
+  },
+  hurt: (a) => {
+    a.tone({ freq: vary(330), to: 160, dur: 0.18, gain: 0.2, type: "square", lp: 1400 });
+    a.noise({ dur: 0.1, gain: 0.12, freq: 900, q: 1 });
+  },
+  shoot: (a) => a.tone({ freq: vary(500), to: 900, dur: 0.18, gain: 0.08, type: "sine" }),
+  roar: (a) => {
+    a.tone({ freq: 90, to: 55, dur: 0.7, gain: 0.3, type: "sawtooth", lp: 500 });
+    a.noise({ dur: 0.6, gain: 0.14, type: "lowpass", freq: 600, to: 150 });
+  },
+  rumble: (a) => a.noise({ dur: 0.35, gain: 0.22, type: "lowpass", freq: 300, to: 90 }),
+  chest: (a) => notes(a, [72, 76, 79, 84, 91], 0.07, { gain: 0.1, dur: 0.4 }),
+  coin: (a) => notes(a, [vary(93, 0.01), 98], 0.05, { type: "square", gain: 0.05, dur: 0.12 }),
+  quest: (a) => notes(a, [72, 79, 84, 88, 91, 96], 0.09, { gain: 0.1, dur: 0.5, release: 0.4 }),
 };
 
 export function play(a, name) {
