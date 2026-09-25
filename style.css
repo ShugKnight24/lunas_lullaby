@@ -302,3 +302,189 @@ kbd { font: 600 13px var(--display); min-width: 140px; text-align: center; backg
   .bag { grid-template-columns: repeat(6, 1fr); }
   .fishlog { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ── Quests, careers, companion, stand ── */
+.quests { display: grid; gap: 10px; }
+.quests h3 { margin: 6px 0 0; font: 600 17px var(--display); }
+.quest { background: #fff; border: 2px solid var(--ink); border-radius: 16px; padding: 10px 14px; display: grid; gap: 6px; }
+.quest p { margin: 0; font-size: 14px; line-height: 1.4; }
+.quest small { color: var(--ink-soft); }
+.quest.ready { background: #fdf3d8; border-color: #c89a2a; box-shadow: 0 3px 0 #e8c86a; }
+.quest.done { background: #f3e6d6; border: 2px dashed rgba(58,37,48,.25); padding: 6px 12px; }
+.qhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-family: var(--display); }
+.goals { display: flex; gap: 6px; flex-wrap: wrap; }
+.goal { font: 600 13px var(--body); background: #f3e6d6; border: 1.5px solid rgba(58,37,48,.35); border-radius: 10px; padding: 2px 10px; }
+.goal.met { background: #dff2d0; border-color: #6aa84a; }
+.careers { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.careers .note { grid-column: 1 / -1; }
+.xpbar.hp span { background: #f0706a; }
+.xpbar.full span { background: #f6c63c; }
+.bag.stand { grid-template-columns: repeat(6, 1fr); margin-bottom: 10px; }
+.bag.stand .slot.empty { background: #f3e6d6; }
+@media (max-width: 640px) { .careers { grid-template-columns: 1fr; } }
+
+/* ── Gear screen ── */
+.gearcols { display: grid; grid-template-columns: 230px 1fr; gap: 16px; }
+.doll { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; align-content: start; }
+.doll .me { grid-column: 1 / -1; height: 110px; border: 2px solid var(--ink); border-radius: 16px; background: linear-gradient(#bfe4f6, #e6f4d8); overflow: hidden; display: flex; justify-content: center; }
+.doll .me svg { height: 100%; }
+.gslot { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 76px; padding: 6px; background: #fff; border: 2.5px solid var(--ink); border-radius: 14px; font: 600 12px var(--body); color: var(--ink); cursor: pointer; }
+.gslot.empty { background: #f3e6d6; border-style: dashed; cursor: default; }
+.gslot .ico svg { width: 40px; height: 40px; }
+.gslot small { text-align: center; line-height: 1.15; }
+.gslot:focus-visible { outline: 3px solid var(--rose); outline-offset: 2px; }
+.sheet { display: grid; gap: 6px; align-content: start; }
+.statrow { display: flex; justify-content: space-between; background: #fbe9d4; border-radius: 10px; padding: 4px 10px; }
+.pointshead { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-family: var(--display); }
+.points { font: 600 13px var(--body); color: var(--ink-soft); }
+.points.has { color: #fff; background: var(--rose); border-radius: 10px; padding: 1px 8px; }
+.attr { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: #fff; border: 2px solid rgba(58,37,48,.25); border-radius: 12px; padding: 4px 6px 4px 10px; }
+.attr small { display: block; color: var(--ink-soft); }
+.attr .btn { padding: 2px 12px; font-size: 18px; }
+.deltas { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
+.delta { font: 700 12px var(--body); border-radius: 8px; padding: 0 6px; background: #f3e6d6; }
+.delta.up { background: #dff2d0; color: #2f6a2a; }
+.delta.down { background: #fbd8d8; color: #8a2a3a; }
+.gear h3 { margin: 14px 0 6px; font: 600 17px var(--display); }
+@media (max-width: 640px) { .gearcols { grid-template-columns: 1fr; } }
+
+/* ── The journal: a bound book ──────────────────────────────────────────────
+   Moss leather with a stitched edge and brass corners, a ruled two-page
+   spread with a gutter shadow, coloured index tabs down the fore-edge, and a
+   hand-written face (Caveat) for titles and the diary. */
+:root {
+  --leather: #4c6243;
+  --leather-dark: #34462e;
+  --stitch: #d8c38a;
+  --brass: #d6a94a;
+  --paper: #f7ecd4;
+  --paper-edge: #e6d3ad;
+  --rule: rgba(88, 122, 168, 0.16);
+  --pencil: #6d5563;
+  --hand: "Caveat", "Segoe Print", "Bradley Hand", cursive;
+}
+.bookwrap { background: rgba(28, 18, 24, 0.55); }
+.book {
+  position: relative; width: min(900px, calc(94vw - 84px)); height: min(640px, 88vh); margin-right: 84px;
+  padding: 18px 20px; border-radius: 18px 26px 26px 18px;
+  background:
+    radial-gradient(120% 90% at 30% 20%, rgba(255,255,255,.08), transparent 60%),
+    repeating-linear-gradient(35deg, rgba(0,0,0,.035) 0 2px, transparent 2px 5px),
+    var(--leather);
+  box-shadow: 0 14px 0 var(--leather-dark), 0 22px 40px rgba(20, 10, 16, .45), inset 0 0 0 3px var(--leather-dark);
+  transform: translateY(14px) scale(.97); transition: transform .25s cubic-bezier(.2,.8,.2,1.1);
+}
+.overlay.in .book { transform: none; }
+/* Stitching a few px in from the leather edge, and brass corner caps. */
+.book::before {
+  content: ""; position: absolute; inset: 7px; border: 2px dashed var(--stitch); border-radius: 13px 20px 20px 13px; opacity: .75; pointer-events: none;
+}
+.book::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background:
+    radial-gradient(circle at 0 0, var(--brass) 0 22px, transparent 23px),
+    radial-gradient(circle at 100% 0, var(--brass) 0 22px, transparent 23px),
+    radial-gradient(circle at 0 100%, var(--brass) 0 22px, transparent 23px),
+    radial-gradient(circle at 100% 100%, var(--brass) 0 22px, transparent 23px);
+  opacity: .9;
+}
+.spread {
+  position: relative; z-index: 1; display: grid; grid-template-columns: minmax(230px, 0.8fr) 1.4fr; height: 100%;
+  border-radius: 8px 14px 14px 8px; overflow: hidden; box-shadow: 0 2px 0 var(--paper-edge), 0 4px 0 #cdb88f;
+}
+.page {
+  position: relative; background:
+    repeating-linear-gradient(to bottom, transparent 0 27px, var(--rule) 27px 28px),
+    var(--paper);
+  color: var(--ink); padding: 26px 30px;
+}
+.page.left { border-right: 1px solid rgba(58,37,48,.15); box-shadow: inset -26px 0 30px -18px rgba(58,37,48,.35); }
+.page.right { overflow: auto; box-shadow: inset 26px 0 30px -18px rgba(58,37,48,.3); padding-right: 46px; transform-origin: left center; }
+.page.right.turn { animation: pageturn .32s cubic-bezier(.3,.7,.2,1); }
+@keyframes pageturn { from { transform: perspective(1400px) rotateY(-24deg); filter: brightness(.9); } to { transform: none; filter: none; } }
+/* A red margin rule on the right-hand page, like a real exercise book. */
+.page.right::before { content: ""; position: absolute; top: 0; bottom: 0; left: 18px; width: 1.5px; background: rgba(232, 86, 106, .35); }
+
+.hand { font-family: var(--hand); font-weight: 700; color: var(--ink); }
+.chapter { display: flex; flex-direction: column; align-items: center; gap: 18px; height: 100%; text-align: center; }
+.chapter h2 { font-size: 42px; line-height: 1; margin: 6px 0 0; transform: rotate(-2deg); }
+.taped {
+  position: relative; margin: 6px 0 0; width: 150px; height: 150px; padding: 10px; background: #fffaf0;
+  box-shadow: 0 3px 8px rgba(58,37,48,.25); transform: rotate(3deg); display: grid; place-items: center;
+}
+.taped::before, .taped::after {
+  content: ""; position: absolute; width: 58px; height: 18px; background: rgba(246, 214, 120, .6); top: -8px;
+}
+.taped::before { left: -14px; transform: rotate(-32deg); }
+.taped::after { right: -14px; transform: rotate(32deg); }
+.taped svg { width: 100%; height: 100%; }
+.facts { list-style: none; margin: auto 0 8px; padding: 0; font: 700 23px/1.25 var(--hand); color: var(--pencil); }
+.facts li + li { margin-top: 4px; }
+
+/* Chapter tabs stick out of the fore-edge. */
+.booktabs {
+  position: absolute; z-index: 0; top: 30px; right: -84px; display: flex; flex-direction: column; gap: 3px;
+}
+.booktab {
+  --tab: #e8566a;
+  font: 700 20px/1 var(--hand); color: #fff; text-shadow: 0 1px 0 rgba(58,37,48,.45);
+  background: var(--tab); border: 2px solid rgba(58,37,48,.55); border-left: none; border-radius: 0 12px 12px 0;
+  padding: 7px 12px 6px 84px; min-width: 176px; text-align: left; cursor: pointer;
+  transform: translateX(-12px); transition: transform .15s;
+}
+.booktab:hover { transform: translateX(-6px); }
+.booktab.on { transform: none; box-shadow: 3px 3px 0 rgba(58,37,48,.25); }
+.booktab:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.ribbon {
+  position: absolute; z-index: 2; bottom: -34px; left: calc(0.8 / 2.2 * 100% + 10px); width: 16px; height: 70px;
+  background: var(--rose); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+}
+.bookclose {
+  position: absolute; z-index: 3; top: -12px; right: -12px; width: 40px; height: 40px; border-radius: 50%;
+  font: 700 24px/1 var(--display); color: var(--ink); background: var(--brass); border: 2.5px solid var(--ink); cursor: pointer;
+}
+.bookclose:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+/* Existing chapter contents, redrawn as ink on paper rather than white cards. */
+.book .jbody { margin: 0; min-height: 0; }
+.book :is(.friend, .quest, .skill, .shopitem, .wish, .fishcard, .recipe, .stat, .slot) { background: rgba(255,255,255,.4); border: 1.5px solid rgba(58,37,48,.4); box-shadow: none; }
+.book :is(.quest.ready, .wish.done) { background: rgba(246, 214, 120, .28); }
+.book .quest.done { background: transparent; border-style: dashed; }
+.book h3 { font: 700 26px var(--hand); margin: 14px 0 4px; }
+.book .note { color: var(--pencil); }
+
+/* Diary. */
+.diary { display: grid; gap: 8px; }
+.write { display: flex; gap: 8px; align-items: flex-end; }
+textarea.note {
+  flex: 1; resize: none; font: 700 22px/28px var(--hand); color: var(--ink); background: transparent;
+  border: none; border-bottom: 2px dashed rgba(58,37,48,.35); padding: 0 2px;
+}
+textarea.note:focus-visible { outline: none; border-bottom-color: var(--rose); }
+.day h3 { margin: 10px 0 2px; color: var(--leather); }
+.day ul { list-style: none; margin: 0; padding: 0; }
+.day li { display: flex; gap: 8px; font: 500 15px/28px var(--body); }
+.day li.mine { font: 700 22px/28px var(--hand); color: #2f4f8a; }
+.day .mark { width: 16px; flex: none; color: var(--pencil); text-align: center; }
+.diary .empty { font-size: 24px; color: var(--pencil); }
+
+@media (max-width: 760px) {
+  .book { width: 94vw; margin-right: 0; height: 88vh; padding: 14px 12px 12px; }
+  .spread { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .page.left { padding: 12px 16px; box-shadow: none; border-right: none; border-bottom: 1px solid rgba(58,37,48,.15); }
+  .chapter { flex-direction: row; justify-content: flex-start; text-align: left; gap: 12px; }
+  .chapter h2 { font-size: 30px; }
+  .taped { width: 64px; height: 64px; padding: 4px; order: -1; }
+  .facts { margin: 0; font-size: 18px; }
+  .page.right { padding: 16px 16px 16px 30px; }
+  .booktabs { position: static; flex-direction: row; overflow-x: auto; margin-top: 8px; }
+  .booktab, .booktab:hover, .booktab.on { flex: none; transform: none; border-radius: 10px; border-left: 2px solid rgba(58,37,48,.55); min-width: 0; padding: 6px 10px; }
+  .book { display: flex; flex-direction: column; }
+  .spread { flex: 1; min-height: 0; }
+  .ribbon { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page.right.turn { animation: none; }
+  .book, .booktab { transition: none; }
+}
+.skill .how { color: var(--ink); }
