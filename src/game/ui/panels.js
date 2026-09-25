@@ -19,7 +19,7 @@ import { addItem, countItem } from "../rules/inventory.js";
 import { seasonName, weekday } from "../rules/clock.js";
 import { affordable } from "../rules/structures.js";
 import { henHearts } from "../rules/animals.js";
-import { SKILLS, SKILL_NAMES, PERKS, PROFESSIONS, skillProgress, skillLevel, MAX_LEVEL, XP } from "../rules/skills.js";
+import { SKILLS, SKILL_NAMES, PERKS, HOW, PROFESSIONS, skillProgress, skillLevel, MAX_LEVEL, XP } from "../rules/skills.js";
 import { award } from "../progress.js";
 import { sfx } from "../audio/sfx.js";
 import { RECIPES } from "../data/recipes.js";
@@ -37,7 +37,10 @@ import { resolveObject } from "../art/index.js";
 import { enterBuild, exitBuild, wallet, costOf, canBuild } from "../build.js";
 import { PAINTS } from "../data/structures.js";
 import { writeSave } from "../game.js";
+import { questEvent } from "../combat.js";
 import { toast } from "./hud.js";
+import { installRpgPanels, questsPage, careersPage, companionPage, trackedQuest } from "./rpg-panels.js";
+import { chaptersFor, chapterPage, diaryPage } from "./journal-book.js";
 
 /** Tiny element builder: h("div.card", { onclick }, child, "text"). */
 export function h(sel, attrs = {}, ...kids) {
@@ -89,7 +92,7 @@ export function createUI(root) {
   addEventListener(
     "keydown",
     (e) => {
-      if (!top || /^(INPUT|TEXTAREA)$/.test(e.target?.tagName) && e.code !== "Escape" && e.code !== "Enter") return;
+      if (!top || /^(INPUT|TEXTAREA)$/.test(e.target?.tagName) && e.code !== "Escape" && (e.code !== "Enter" || e.target.tagName === "TEXTAREA")) return;
       if (top.onKey && top.onKey(e) === true) {
         e.preventDefault();
         e.stopPropagation();
@@ -105,6 +108,7 @@ export function createUI(root) {
   );
 
   ui.isOpen = () => !!top;
+  installRpgPanels(ui, { h, open, close });
 
   // ── HUD strip: Bag / Journal / Menu, and the first-day task card ──
   const count = h("span.count");
@@ -113,7 +117,7 @@ export function createUI(root) {
   const strip = h(
     "div.hudstrip",
     {},
-    h("div.hudbtns", {}, hudBtn("Bag", "I", () => ui.journal("items"), count), hudBtn("Craft", "K", () => ui.journal("craft")), hudBtn("Journal", "J", () => ui.journal("friends")), hudBtn("Menu", "Esc", () => ui.pause())),
+    h("div.hudbtns", {}, hudBtn("Bag", "I", () => ui.journal("items"), count), hudBtn("Gear", "C", () => ui.character()), hudBtn("Craft", "K", () => ui.journal("craft")), hudBtn("Journal", "J", () => ui.journal("diary")), hudBtn("Menu", "Esc", () => ui.pause())),
     task,
   );
   root.append(strip);
@@ -124,13 +128,15 @@ export function createUI(root) {
     const tut = s.tutorial;
     const showTask = g.mode !== "title" && s.flags.intro && !tut.done;
     const used = s.inv.filter(Boolean).length;
-    const key = `${g.mode}|${used}|${showTask}|${tut.step}|${g.tutFlash > 0}`;
+    const track = g.mode !== "title" && !showTask ? trackedQuest(g) : null;
+    const key = `${g.mode}|${used}|${showTask}|${tut.step}|${g.tutFlash > 0}|${track?.key ?? ""}`;
     if (key === hudKey) return;
     hudKey = key;
     strip.hidden = g.mode === "title" || g.mode === "build";
     count.textContent = `${used}/${s.inv.length}`;
-    task.hidden = !showTask;
+    task.hidden = !showTask && !track;
     task.classList.toggle("flash", g.tutFlash > 0);
+    if (track) return task.replaceChildren(h("div.taskhead", {}, h("b", {}, track.title), h("span", {}, track.who)), h("p", {}, track.goal));
     if (!showTask) return;
     const step = TUTORIAL[tut.step];
     task.replaceChildren(
@@ -250,42 +256,6 @@ export function createUI(root) {
     setTimeout(() => input.focus(), 50);
   };
 
-  // ── Shop ──
-  ui.shop = () => {
-    const g = ui.g;
-    const stock = [...SHOP_SEEDS[g.s.clock.season], "fertilizer", "deluxe_fertilizer", "hay", "bread"];
-    const gold = h("div.gold");
-    const list = h("div.shoplist");
-    const render = () => {
-      gold.textContent = `${g.s.gold.toLocaleString()}g`;
-      list.replaceChildren(
-        ...stock.map((id) => {
-          const it = ITEMS[id];
-          const crop = it.crop && CROPS[it.crop];
-          const buy = (n) => {
-            if (g.s.gold < it.price * n) return toast(g, "Not enough gold.");
-            if (addItem(g.s.inv, id, n) > 0) return toast(g, "Your bag is full!");
-            g.s.gold -= it.price * n;
-            toast(g, `Bought ${n} × ${it.name}`, id);
-            render();
-          };
-          return h(
-            "div.shopitem",
-            {},
-            h("div.ico", { html: iconSvg(id) }),
-            h("div.info", {}, h("b", {}, it.name), h("small", {}, crop ? `${totalDays(crop)} days · ${crop.seasons.join(" & ")}${crop.regrow ? ` · regrows every ${crop.regrow}` : ""} · sells ${ITEMS[crop.produce].sell}g` : it.energy ? `Restores ${it.energy} energy` : it.tip)),
-            h("span.price", {}, `${it.price}g`),
-            h("button.btn", { onclick: () => buy(1), disabled: g.s.gold < it.price }, "Buy"),
-            h("button.btn", { onclick: () => buy(5), disabled: g.s.gold < it.price * 5 }, "×5"),
-          );
-        }),
-      );
-    };
-    render();
-    const box = h("div.panel.wide", {}, h("header", {}, h("h2", {}, "Mira's Bakery & Seeds"), gold), g.s.clock.season === 3 ? h("p.note", {}, "Only Moonbloom braves the frost. Snow won't water it for you!") : null, list, h("div.row", {}, h("button.btn", { onclick: close }, "Close")));
-    open(box);
-  };
-
   // ── Build ──
   ui.buildMenu = () => {
     const g = ui.g;
@@ -357,15 +327,33 @@ export function createUI(root) {
   };
 
   // ── Journal ──
-  ui.journal = (tab = "friends") => {
+  ui.journal = (tab = "diary") => {
     const g = ui.g;
     const body = h("div.jbody");
-    const tabs = h("div.tabs");
+    const tabs = h("nav.booktabs", { "aria-label": "Journal chapters" });
+    const left = h("section.page.left");
+    const right = h("section.page.right", {}, body);
     let pick = -1;
     const show = (t) => {
+      const turned = t !== tab;
       tab = t;
-      tabs.replaceChildren(...[["friends", "Friends"], ["items", "Bag"], ["craft", "Craft"], ["fish", "Fish"], ["skills", "Skills"], ["wishes", "Wishes"], ["farm", "Farm"]].map(([id, label]) => h(`button.tab${id === t ? ".on" : ""}`, { onclick: () => show(id) }, label)));
-      if (t === "friends") {
+      const chapters = chaptersFor(g);
+      tabs.replaceChildren(
+        ...chapters.map((c) =>
+          h(`button.booktab${c.id === t ? ".on" : ""}`, { onclick: () => show(c.id), style: `--tab:${c.color}`, "aria-current": c.id === t ? "page" : false }, c.label),
+        ),
+      );
+      const ch = chapters.find((c) => c.id === t);
+      left.replaceChildren(chapterPage(g, ch));
+      if (turned) {
+        right.classList.remove("turn");
+        void right.offsetWidth;
+        right.classList.add("turn");
+      }
+      right.scrollTop = 0;
+      if (t === "diary") {
+        body.replaceChildren(diaryPage(g, () => show("diary")));
+      } else if (t === "friends") {
         body.replaceChildren(
           ...VILLAGER_IDS.map((id) => {
             const v = VILLAGERS[id];
@@ -408,6 +396,12 @@ export function createUI(root) {
           );
         draw();
         body.replaceChildren(grid, h("p.note", {}, "Click two slots to swap them. The top row is your hotbar (keys 1–9)."));
+      } else if (t === "quests") {
+        body.replaceChildren(questsPage(g, h));
+      } else if (t === "careers") {
+        body.replaceChildren(careersPage(g, h));
+      } else if (t === "pet") {
+        body.replaceChildren(companionPage(g, h));
       } else if (t === "wishes") {
         const pet = g.s.profile.pet;
         const vars = { pet: pet.name, name: g.s.profile.name };
@@ -440,6 +434,7 @@ export function createUI(root) {
                   if (res.error) return toast(g, res.error);
                   sfx(g, "craft");
                   award(g, "building", XP.craft(r.in));
+                  questEvent(g, { act: "craft" });
                   toast(g, `Crafted ${n > 1 ? `${n} × ` : ""}${ITEMS[out].name}`, out);
                   draw();
                 };
@@ -476,6 +471,7 @@ export function createUI(root) {
                 h("div.skillhead", {}, h("b", {}, SKILL_NAMES[id]), h("span.lvl", {}, `Level ${p.level}${p.level >= MAX_LEVEL ? " · max" : ""}`)),
                 h("div.xpbar", { role: "progressbar", "aria-valuenow": pct, "aria-valuemin": 0, "aria-valuemax": 100, "aria-label": `${SKILL_NAMES[id]} progress` }, h("span", { style: `width:${pct}%` })),
                 h("small", {}, p.need ? `${p.into} / ${p.need} XP to level ${p.level + 1}` : "Mastered!"),
+                h("small.how", {}, HOW[id]),
                 h("small.perk", {}, `Each level: tools cost less energy. ${PERKS[id]}.`),
                 g.s.professions[id]
                   ? h("small.prof", {}, `★ ${PROFESSIONS[id].find((p) => p.id === g.s.professions[id]).name}: ${PROFESSIONS[id].find((p) => p.id === g.s.professions[id]).desc}`)
@@ -525,9 +521,18 @@ export function createUI(root) {
         );
       }
     };
-    show(tab);
-    const box = h("div.panel.wide.journal", {}, h("header", {}, h("h2", {}, `${g.s.profile.name}'s Journal`), tabs), body, h("div.row", {}, h("button.btn", { onclick: close }, "Close")));
-    open(box, { onKey: (e) => (e.code === "KeyJ" || e.code === "KeyR" || e.code === "KeyI" || e.code === "KeyK" ? (close(), true) : false) });
+    const first = tab;
+    tab = null;
+    show(first);
+    const book = h(
+      "div.book",
+      { role: "dialog", "aria-label": `${g.s.profile.name}'s journal` },
+      h("div.spread", {}, left, right),
+      tabs,
+      h("div.ribbon", { "aria-hidden": "true" }),
+      h("button.bookclose", { onclick: close, "aria-label": "Close the journal" }, "×"),
+    );
+    open(book, { cls: "bookwrap", onKey: (e) => (e.code === "KeyJ" || e.code === "KeyR" || e.code === "KeyI" || e.code === "KeyK" ? (close(), true) : false) });
   };
 
   /** Volume sliders (saved per browser) and a mute toggle. */
@@ -550,7 +555,9 @@ export function createUI(root) {
     const g = ui.g;
     const keys = [
       ["WASD / Arrows", "Walk (ride with F)"],
-      ["Space / Click", "Use tool or seeds"],
+      ["Space / Click", "Use tool or seeds (empty hand: swing)"],
+      ["Q", "Swing your weapon · hold, then release, to spin"],
+      ["C", "Gear, stats and stat points"],
       ["E / Right-click", "Talk, gift, pet, ship, harvest"],
       ["F", "Mount / dismount the horse"],
       ["1–9 / Wheel", "Choose hotbar slot"],
@@ -586,6 +593,7 @@ export function createUI(root) {
       report.passedOut ? h("p.note", {}, `Someone carried you home. The clinic fee was ${report.penalty}g.`) : null,
       h("div.shipped", {}, lines),
       h("div.total", {}, h("span", {}, "Earned"), h("b", {}, `+${report.total}g`)),
+      report.stand ? h("p.note", {}, `Your Farm Stand sold ${report.stand.lines.reduce((a, l) => a + l.n, 0)} item${report.stand.lines.length > 1 || report.stand.lines[0]?.n > 1 ? "s" : ""} for +${report.stand.total}g.`) : null,
       report.eggs ? h("p.note", {}, `Your hens laid ${report.eggs} egg${report.eggs > 1 ? "s" : ""}.`) : null,
       ...(report.wishes ?? []).map((id) => {
         const w = WISHES.find((x) => x.id === id);

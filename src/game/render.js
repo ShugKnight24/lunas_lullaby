@@ -17,6 +17,11 @@ import { drawPlayer, drawPet, drawHorse, drawVillager, drawChicken } from "./act
 import { smoothMinute } from "./game.js";
 import { drawHud } from "./ui/hud.js";
 import { placementQuery } from "./build.js";
+import { drawEnemy } from "./actors/enemies.js";
+import { drawHerd } from "./actors/herd.js";
+import { drawFetch } from "./fetch.js";
+import { drawRaceGround } from "./race.js";
+import { drawCombatGround, drawCombatFx, drawCombatOverlay } from "./combat.js";
 
 const OPT = { alpha: 1, flip: false, cap: 512 };
 const list = [];
@@ -49,6 +54,24 @@ function rgb(r, g, b) {
   return s;
 }
 const FADES = Array.from({ length: 101 }, (_, i) => `rgba(44,28,38,${i / 100})`);
+const HURT = Array.from({ length: 11 }, (_, i) => `rgba(220,60,70,${(i * 0.022).toFixed(3)})`);
+
+/** A little speech bubble over your companion ("!" treasure, "…" hurt). */
+function petBubble(ctx, x, y, z, s) {
+  ctx.fillStyle = "#fff6e6";
+  ctx.strokeStyle = "#3a2530";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(x - 9 * z, y - 10 * z, 18 * z, 16 * z, 6 * z);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#3a2530";
+  ctx.font = "700 14px Fredoka, Nunito, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(s, x, y - 2 * z);
+  ctx.textBaseline = "alphabetic";
+}
 
 function blit(ctx, key, spr, x, y, z, t, alpha = 1, cap = 512) {
   OPT.alpha = alpha;
@@ -75,10 +98,10 @@ export function renderGame(ctx, view, g, t) {
   const lv = g.lv;
   const z = g.cam.z;
   const T = TILE * z;
-  const ox = Math.round(view.w / 2 - g.cam.x * z);
-  const oy = Math.round(view.h / 2 - g.cam.y * z);
+  const ox = Math.round(view.w / 2 - g.cam.x * z + (g.shakeX || 0));
+  const oy = Math.round(view.h / 2 - g.cam.y * z + (g.shakeY || 0));
   const season = g.s.clock.season;
-  ctx.fillStyle = lv.outdoor ? "#8cc06c" : "#2c1c26";
+  ctx.fillStyle = lv.id === "wildwood" ? "#5f9e5a" : lv.outdoor ? "#8cc06c" : "#2c1c26";
   ctx.fillRect(0, 0, view.w, view.h);
 
   const tx0 = Math.max(0, Math.floor(-ox / T) - 1);
@@ -91,7 +114,7 @@ export function renderGame(ctx, view, g, t) {
     const cs = CHUNK * T;
     for (let cy = Math.floor(ty0 / CHUNK); cy <= Math.floor(ty1 / CHUNK); cy++) {
       for (let cx = Math.floor(tx0 / CHUNK); cx <= Math.floor(tx1 / CHUNK); cx++) {
-        const c = g.ground.get(cx, cy, t);
+        const c = g.grounds[lv.id].get(cx, cy, t);
         const x = Math.round(ox + cx * cs);
         const y = Math.round(oy + cy * cs);
         ctx.drawImage(c, x, y, Math.round(ox + (cx + 1) * cs) - x, Math.round(oy + (cy + 1) * cs) - y);
@@ -126,6 +149,8 @@ export function renderGame(ctx, view, g, t) {
     if (o.flat && o.kind === "structure") blit(ctx, o.key, o.spr, ox + o.tx * T, oy + o.ty * T, z, t);
     else blit(ctx, o.key, o.spr, ox + o.x * z, oy + o.y * z, z, t);
   }
+  if (lv.id === "wildwood") drawCombatGround(ctx, g, ox, oy, z, t);
+  drawRaceGround(ctx, g, ox, oy, z, t);
   // Target cursor for tools and seeds.
   if (g.mode === "play" && !g.player.mounted && g.s.inv[g.s.sel] && lv.inside(g.target[0], g.target[1])) {
     ctx.strokeStyle = "rgba(255,248,230,0.75)";
@@ -157,6 +182,8 @@ export function renderGame(ctx, view, g, t) {
     if (!g.player.mounted && g.horse.level === "world") (g.horse.dk = "horse"), list.push(g.horse);
   }
   for (const v of g.villagers) if (v.level === lv.id) (v.dk = "npc"), list.push(v);
+  if (lv.id === "wildwood") for (const e of g.enemies) (e.dk = "enemy"), list.push(e);
+  if (lv.id === "sunridge") for (const a of g.herd) list.push(a);
   // In build mode the view shows the farm while the player may be indoors.
   if (g.mode !== "build" || g.build.prevLevel === lv) {
     g.pet.dk = "pet";
@@ -172,10 +199,23 @@ export function renderGame(ctx, view, g, t) {
     const sy = oy + e.y * z;
     switch (e.dk) {
       case "player":
+        // Blink while invulnerable after a hit.
+        if (e.iT > 0 && Math.floor(e.iT * 18) % 2) ctx.globalAlpha = 0.35;
         drawPlayer(ctx, e, g.horse, sx, sy, z, t);
+        ctx.globalAlpha = 1;
+        break;
+      case "enemy":
+        drawEnemy(ctx, e, sx, sy, z, t);
+        break;
+      case "herd":
+        drawHerd(ctx, e, sx, sy, z, t);
         break;
       case "pet":
-        drawPet(ctx, e, sx, sy, z, t);
+        if (e.iT > 0 && Math.floor(e.iT * 18) % 2) ctx.globalAlpha = 0.4;
+        drawPet(ctx, e, sx, sy - (e.lunge > 0 ? Math.sin((e.lunge / 0.25) * Math.PI) * 6 * z : 0), z, t);
+        ctx.globalAlpha = 1;
+        if (e.alert > 0) petBubble(ctx, sx, sy - 44 * z, z, "!");
+        else if (lv.id === "wildwood" && g.s.pet.hp <= 0) petBubble(ctx, sx, sy - 44 * z, z, "…");
         break;
       case "horse":
         drawHorse(ctx, e, sx, sy, z, t);
@@ -206,9 +246,9 @@ export function renderGame(ctx, view, g, t) {
         if (e.shake > 0) x += Math.sin(e.shake * 60) * e.shake * 10 * z;
         let a = 1;
         // See the player through canopies and roofs they walk behind.
-        if ((e.kind === "tree" && !e.stump) || e.kind === "building" || e.type === "coop") {
-          const hw = e.kind === "tree" ? 40 : e.w * 16;
-          const top = e.kind === "tree" ? 120 : e.h * 32 + 60;
+        if ((e.kind === "tree" && !e.stump) || e.kind === "building" || e.type === "coop" || e.kind === "arch" || e.kind === "appletree" || e.kind === "silo") {
+          const hw = e.kind === "tree" || e.kind === "appletree" ? 40 : e.w * 16 + (e.kind === "arch" ? 20 : 0);
+          const top = e.kind === "tree" || e.kind === "appletree" ? 120 : e.kind === "arch" ? 110 : e.h * 32 + 60;
           if (p.y < e.y - 4 && p.y > e.y - top && Math.abs(p.x - e.x) < hw) a = 0.5;
         }
         blit(ctx, e.key, e.spr, x, sy, z, t, a, e.kind === "building" || e.type === "coop" ? 1024 : 512);
@@ -216,7 +256,9 @@ export function renderGame(ctx, view, g, t) {
     }
   }
 
+  drawFetch(ctx, g, ox, oy, z);
   drawFx(ctx, ox, oy, z);
+  if (g.enemies) drawCombatFx(ctx, g, ox, oy, z, t);
   if (g.mode === "fishing") drawBobber(ctx, g, ox, oy, z, t);
 
   // Weather and grade (outdoors).
@@ -240,6 +282,14 @@ export function renderGame(ctx, view, g, t) {
     b *= 0.95;
     dark = Math.max(dark, 0.12);
   }
+  // Under the Wildwood canopy it's always a little dim and green, less so once the gloom lifts.
+  if (lv.id === "wildwood") {
+    const k = g.s.flags.gloomroot ? 0.9 : 0.8;
+    r *= k;
+    gg *= k + 0.06;
+    b *= k + 0.02;
+    dark = Math.max(dark, g.s.flags.gloomroot ? 0.1 : 0.18);
+  }
   if (r < 254 || gg < 254 || b < 254) {
     ctx.globalCompositeOperation = "multiply";
     ctx.fillStyle = rgb(r | 0, gg | 0, b | 0);
@@ -248,9 +298,14 @@ export function renderGame(ctx, view, g, t) {
   }
   if (dark > 0.1) drawGlows(ctx, g, lv, ox, oy, z, t, dark);
 
+  if (g.enemies) drawCombatOverlay(ctx, g, ox, oy, z, t);
   if (g.mode === "build") drawGhost(ctx, g, ox, oy, z, t);
   drawHud(ctx, view, g, t, ox, oy, z);
 
+  if (g.hurtFlash > 0) {
+    ctx.fillStyle = HURT[Math.round(Math.min(1, g.hurtFlash / 0.35) * 10)];
+    ctx.fillRect(0, 0, view.w, view.h);
+  }
   if (g.fade.a > 0.001) {
     ctx.fillStyle = FADES[Math.round(g.fade.a * 100)];
     ctx.fillRect(0, 0, view.w, view.h);

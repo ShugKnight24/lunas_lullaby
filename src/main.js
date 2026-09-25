@@ -7,6 +7,8 @@
 import { startLoop } from "./engine/loop.js";
 import { createInput } from "./engine/input.js";
 import { createGame, update, render, newGame, continueGame, loadState, sleep, resolveSeason, writeSave, syncSoil, retarget } from "./game/game.js";
+import { createEnemy } from "./game/actors/enemies.js";
+import { attack, wear } from "./game/combat.js";
 import { createUI } from "./game/ui/panels.js";
 import { showTitle } from "./game/ui/creator.js";
 import { useTool, interact, toggleMount } from "./game/actions.js";
@@ -29,7 +31,9 @@ const bindings = {
   down: ["KeyS", "ArrowDown"],
   left: ["KeyA", "ArrowLeft"],
   right: ["KeyD", "ArrowRight"],
-  use: ["Space", "KeyC"],
+  use: ["Space"],
+  attack: ["KeyQ"],
+  character: ["KeyC"],
   interact: ["KeyE", "Enter"],
   mount: ["KeyF"],
   pause: ["Escape"],
@@ -89,7 +93,7 @@ const saveOnLeave = () => g.mode !== "title" && writeSave(g);
 addEventListener("pagehide", saveOnLeave);
 document.addEventListener("visibilitychange", () => document.hidden && saveOnLeave());
 
-startLoop(canvas, {
+const loop = startLoop(canvas, {
   update(dt, t) {
     update(g, dt, t);
     director.update(dt, audioScene());
@@ -158,4 +162,31 @@ window.__game = {
     input.mouse.y = (ty * TILE + TILE / 2 - g.cam.y) * g.cam.z + g.view.h / 2;
   },
   rollWeather,
+  /** Run the simulation `n` frames at 60 fps right now (independent of rAF throttling). */
+  step(n = 60) {
+    for (let i = 0; i < n; i++) {
+      update(g, 1 / 60, (g.time || 0) + 1 / 60);
+      input.endFrame();
+    }
+  },
+  /** Put a creature (data/monsters.js id) on a tile of the current level. */
+  spawn(type, tx, ty) {
+    const e = createEnemy(type, tx * TILE + TILE / 2, ty * TILE + TILE / 2 + 6);
+    e.zone = "edge";
+    g.enemies.push(e);
+    return e;
+  },
+  clearEnemies: () => (g.enemies.length = 0),
+  /** Render one frame now (a hidden tab pauses requestAnimationFrame). */
+  draw() {
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(loop.view.k, 0, 0, loop.view.k, 0, 0);
+    render(ctx, loop.view, g, performance.now() / 1000);
+  },
+  /** Wear the first bag item `id`; returns whether it went on. */
+  equip(id) {
+    const i = g.s.inv.findIndex((x) => x?.id === id);
+    return i >= 0 && wear(g, i);
+  },
+  attack: () => ((g.player.useT = 0), attack(g)),
 };

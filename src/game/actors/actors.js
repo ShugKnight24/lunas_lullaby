@@ -10,7 +10,7 @@ import { DEFS, petSpr, horseSpr, chickenSpr, iconSpr, iconKey } from "../art/ind
 import { drawSvgSprite } from "../../engine/sprite.js";
 import { moveBox, boxFree } from "../world/collide.js";
 import { findPath } from "../world/path.js";
-import { WAYPOINTS, BUILDING_SPOTS, INTERIORS } from "../world/map.js";
+import { WAYPOINTS, ALL_SPOTS, INTERIORS } from "../world/map.js";
 import { BUILDINGS, bikeSprite, BIKE_OFFSET } from "../art/props.js";
 import { scheduleFor, waypointAt } from "../rules/schedule.js";
 
@@ -58,15 +58,16 @@ export const moveMult = (p, sprint) => (p.mounted ? RIDE_MULT : p.biking ? BIKE_
 export function movePlayer(p, lv, ax, ay, dt, mult = 1) {
   p.moving = false;
   p.vx = p.vy = 0;
-  if (p.useT > 0 || (!ax && !ay)) {
+  // Tools root you; a sword swing (p.move) only slows you and keeps your facing.
+  if ((p.useT > 0 && !p.move) || (!ax && !ay)) {
     p.idleT += dt;
     return false;
   }
   const len = Math.hypot(ax, ay);
-  const sp = WALK_SPEED * mult * dt;
+  const sp = WALK_SPEED * mult * dt * (p.useT > 0 ? 0.4 : 1);
   const dx = (ax / len) * sp;
   const dy = (ay / len) * sp;
-  p.dir = dirFrom(ax, ay, p.dir);
+  if (!(p.useT > 0)) p.dir = dirFrom(ax, ay, p.dir);
   const bx = p.x;
   const by = p.y;
   moveBox(lv, p, dx, dy, p.mounted ? 12 : 8, 5, p.mounted);
@@ -117,10 +118,12 @@ export function drawPlayer(ctx, p, horse, sx, sy, z, t) {
   const bob = !using && p.moving && fi !== 0 ? 1.4 : 0;
   const breathe = !p.moving && !using ? Math.sin(t * 2.2) * 0.4 : 0;
   shadow(ctx, sx, sy, 11, 4, z);
-  const f = p.frames[sd][fi];
-  if (using && p.dir === "up") drawTool(ctx, p, sx, sy, z, t);
+  // Mid-swing the sword is in hand, not on the back.
+  const f = (using && p.swingFrames && p.useItem === p.weapon ? p.swingFrames : p.frames)[sd][fi];
+  const tool = using && p.useItem !== p.weapon; // combat.js draws the sword
+  if (tool && p.dir === "up") drawTool(ctx, p, sx, sy, z, t);
   blit(ctx, f.key, f.sprite, sx, sy - (bob + breathe) * z, z, t, flip);
-  if (using && p.dir !== "up") drawTool(ctx, p, sx, sy, z, t);
+  if (tool && p.dir !== "up") drawTool(ctx, p, sx, sy, z, t);
 }
 
 /** Held tool swinging through an arc during the use animation. */
@@ -166,7 +169,7 @@ export function updatePet(a, pl, lv, dt, t) {
   a.stateT -= dt;
   if (pl.moving || far > TILE * 4) {
     if (a.state !== "follow" && a.state !== "path") a.state = "follow";
-  } else if (a.state === "follow" && pl.idleT > 1.8 && a.stateT <= 0) {
+  } else if (a.state === "follow" && pl.idleT > 1.8 && a.stateT <= 0 && !a.goal) {
     a.state = Math.random() < 0.5 ? "sit" : "sniff";
     a.stateT = 3 + Math.random() * 4;
     a.sniffX = pl.x + (Math.random() - 0.5) * TILE * 3;
@@ -179,6 +182,12 @@ export function updatePet(a, pl, lv, dt, t) {
     tx = a.sniffX;
     ty = a.sniffY;
   }
+  // In a fight, run to the creature it's after (set by combat.js).
+  if (a.goal) {
+    if (a.state !== "path") a.state = "follow";
+    tx = a.goal.x;
+    ty = a.goal.y;
+  }
   if (a.state === "path") {
     if (!a.path || a.pi >= a.path.length) a.state = "follow";
     else {
@@ -190,7 +199,7 @@ export function updatePet(a, pl, lv, dt, t) {
   const dx = tx - a.x;
   const dy = ty - a.y;
   const d = Math.hypot(dx, dy);
-  const maxSp = WALK_SPEED * (pl.mounted ? RIDE_MULT * 1.05 : Math.max(1.1, moveMult(pl, pl.sprinting) * 1.05)) * (a.state === "sniff" ? 0.35 : 1);
+  const maxSp = WALK_SPEED * (pl.mounted ? RIDE_MULT * 1.05 : Math.max(1.1, moveMult(pl, pl.sprinting) * 1.05)) * (a.state === "sniff" ? 0.35 : a.goal ? 1.35 : a.tired ? 0.7 : 1);
   const slow = 40;
   const want = a.state === "sit" || d < 6 ? 0 : Math.min(maxSp, (maxSp * d) / slow);
   const wx = d > 0.01 ? (dx / d) * want : 0;
@@ -278,7 +287,7 @@ export function createVillager(id, def) {
 export const currentWaypoint = (def, min, ctx) => waypointAt(scheduleFor(def, ctx), min);
 
 export const doorOf = (levelId) => {
-  const b = BUILDING_SPOTS.find((s) => s.interior === levelId);
+  const b = ALL_SPOTS.find((s) => s.interior === levelId);
   const st = BUILDINGS[b.style];
   return [b.tx + (st.w >> 1), b.ty + st.d - 1];
 };

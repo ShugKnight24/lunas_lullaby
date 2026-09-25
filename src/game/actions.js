@@ -15,11 +15,12 @@ import { MACHINES } from "./data/machines.js";
 import { STRUCTURES } from "./data/structures.js";
 import { loadMachine, collectMachine, emptyMachine } from "./rules/machines.js";
 import { canPlace } from "./rules/structures.js";
+import { STAND_SLOTS } from "./rules/careers.js";
 import { stockHay, petHen, eggCount, henHearts, FEEDS, COOP_HAY_CAP } from "./rules/animals.js";
 import { sellPrice, qualityName } from "./rules/quality.js";
 import { TOOL_SKILL, toolEnergy, XP, farmingBonus, forageDouble, ranchingPet, has, sellMult } from "./rules/skills.js";
 import { HEN_LOVE } from "./rules/animals.js";
-import { award, progress, level } from "./progress.js";
+import { award, progress, level, diary } from "./progress.js";
 import { sfx } from "./audio/sfx.js";
 import { plant, water, harvest, isRipe, clearDead, emptySoil, fertilize } from "./rules/crops.js";
 import { shipItem } from "./rules/shipping.js";
@@ -33,8 +34,18 @@ import { syncSoil, sleep, setEnergy, addStructureObject } from "./game.js";
 import { placementQuery } from "./build.js";
 import { startFishing } from "./fishing.js";
 import { toast } from "./ui/hud.js";
+import { attack, wear, playerMaxHp, questEvent, buffNow } from "./combat.js";
+import { BUFFS } from "./data/cooking.js";
+import { throwBall } from "./fetch.js";
+import { flagInteract } from "./race.js";
+import { questChat } from "./quests.js";
+import { objStore } from "./game.js";
+import { feedPet, petMaxHp } from "./rules/combat.js";
+import { CHEST_LOOT, CHEST_DAYS, ORE_DAYS, HERB_DAYS } from "./world/wildwood.js";
 
-const REGROW = { tree: 7, rock: 4, weed: 5, twig: 5 };
+const REGROW = { tree: 7, rock: 4, weed: 5, twig: 5, ore: ORE_DAYS, herb: HERB_DAYS, chest: CHEST_DAYS };
+/** What an ore stone gives when it breaks: [item, min, max]. */
+const ORE_YIELD = { amber: ["amber", 1, 2], iron: ["iron_ore", 2, 3], moonstone: ["moonstone", 1, 1] };
 
 export const selected = (g) => g.s.inv[g.s.sel];
 const today = (g) => dayIndex(g.s.clock);
@@ -64,13 +75,17 @@ function spend(g, cost) {
 }
 
 function persist(g, o) {
-  const st = (g.s.objs[o.id] ??= {});
+  const st = (objStore(g, g.lv.id)[o.id] ??= {});
   st.hp = o.hp;
   if (o.stump) st.stump = true;
+  if (o.open) {
+    st.open = true;
+    st.back = today(g) + REGROW.chest;
+  }
   if (o.gone) {
     st.gone = true;
     const days = REGROW[o.kind];
-    if (days && !(inFarm(o.tx, o.ty) && o.kind !== "tree")) st.back = today(g) + days;
+    if (days && !(g.lv.id === "world" && inFarm(o.tx, o.ty) && o.kind !== "tree")) st.back = today(g) + days;
   }
 }
 
@@ -84,11 +99,19 @@ function removeObj(g, o) {
 
 export function useTool(g) {
   const p = g.player;
+  if (p.move) return attack(g); // mid-swing: queue the next hit of the combo
   if (p.useT > 0 || p.mounted) return;
   const slot = selected(g);
-  if (!slot) return;
+  // An empty hand swings your weapon; so does Space/click in the Wildwood
+  // unless what you're holding has something to work on right there.
+  if (!slot) return g.s.equip.weapon && attack(g);
+  if (g.lv.id === "wildwood" && g.s.equip.weapon && !handy(g, slot)) return attack(g);
   const def = ITEMS[slot.id];
   if (def.kind === "vehicle") return toggleBike(g);
+  if (def.slot) return wear(g, g.s.sel);
+  if (def.kind === "treat") return toast(g, `${def.name}: ${def.tip}.`);
+  if (def.kind === "toy") return throwBall(g);
+  if (def.kind === "stand") return placeStand(g, slot, g.target[0], g.target[1]);
   if (p.biking) return toast(g, "Hop off your bike first (B).");
   const [tx, ty] = g.target;
   if (def.kind === "food") return eat(g);
@@ -96,9 +119,9 @@ export function useTool(g) {
   if (def.kind === "fertilizer") return feedSoil(g, slot, tx, ty);
   if (def.kind === "machine") return placeMachine(g, slot, tx, ty);
   if (def.kind === "tackle") return toast(g, `${def.name}: ${def.tip}.`);
-  if (def.kind !== "tool") return toast(g, def.kind === "crop" || def.kind === "forage" || def.kind === "fish" || def.kind === "animal" ? "Ship it in the bin or give it as a gift (E)." : `${def.name}: nothing to do with it here.`);
+  if (def.kind !== "tool") return toast(g, def.kind === "crop" || def.kind === "forage" || def.kind === "fish" || def.kind === "animal" || def.kind === "mineral" || def.kind === "loot" ? "Ship it, sell it at Pip's, or give it as a gift (E)." : `${def.name}: nothing to do with it here.`);
   if (slot.id === "rod") return startFishing(g);
-  if (!spend(g, toolEnergy(def.energy, level(g, TOOL_SKILL[slot.id])))) return;
+  if (!spend(g, Math.max(1, Math.round(toolEnergy(def.energy, level(g, TOOL_SKILL[slot.id])) * (buffNow(g)?.energy ?? 1))))) return;
   p.useT = p.useMax;
   p.useItem = slot.id;
   const lv = g.lv;
@@ -120,6 +143,20 @@ export function useTool(g) {
     if (lv.id === "world" && g.s.soil[idx]) return reap(g, idx, tx, ty);
   }
   burst(FXK.DUST, x, y + 8, 3, 30, 0.4, "rgba(200,170,130,0.7)");
+}
+
+/** Would the held item do something useful at the tile you face? */
+function handy(g, slot) {
+  const def = ITEMS[slot.id];
+  if (def.kind === "food" || def.kind === "treat" || def.slot || def.kind === "vehicle" || def.kind === "toy") return true;
+  if (def.kind !== "tool") return false;
+  const [tx, ty] = g.target;
+  const o = g.lv.at(tx, ty);
+  const live = o && !o.gone;
+  if (slot.id === "axe") return !!(live && ["tree", "ore", "rock", "twig", "stump"].includes(o.kind));
+  if (slot.id === "scythe") return !!(live && o.kind === "weed");
+  if (slot.id === "can" || slot.id === "rod") return g.lv.isWater(tx, ty);
+  return false;
 }
 
 function hoe(g, tx, ty, o) {
@@ -204,6 +241,19 @@ function placeMachine(g, slot, tx, ty) {
   sfx(g, "build");
 }
 
+/** Set the Farm Stand down on the farm (2×1). */
+function placeStand(g, slot, tx, ty) {
+  if (g.lv.id !== "world" || !inFarm(tx, ty)) return toast(g, "The Farm Stand goes on your farm, somewhere villagers pass by.");
+  if (!canPlace(STRUCTURES.farm_stand, tx, ty, placementQuery(g))) return toast(g, "There's no room there (it's two tiles wide).");
+  const st = { uid: g.s.uid++, type: "farm_stand", tx, ty, stock: new Array(STAND_SLOTS).fill(null) };
+  g.s.structures.push(st);
+  const o = addStructureObject(g, st);
+  takeFromSlot(g.s.inv, g.s.sel);
+  burst(FXK.DUST, o.x, o.y, 8, 50, 0.5, "rgba(200,170,130,0.8)");
+  sfx(g, "build");
+  toast(g, "Your Farm Stand is open! Press E at it to stock goods.", "farm_stand");
+}
+
 /** E at a machine: collect a finished product, or load what's in hand. */
 function tendMachine(g, o) {
   const i = g.s.structures.findIndex((st) => st.uid === o.uid);
@@ -226,6 +276,11 @@ function tendMachine(g, o) {
   refreshMachine(g, o, r.st);
   sfx(g, "craft");
   toast(g, `${m.name} is working on your ${ITEMS[r.st.input].name}.`, r.st.input);
+}
+
+export function refreshStand(g, o, st) {
+  o.busy = st.stock.some(Boolean);
+  resolveObject(o, g.s.clock.season);
 }
 
 export function refreshMachine(g, o, st) {
@@ -258,6 +313,8 @@ function reap(g, idx, tx, ty) {
   if (!h) return false;
   if (!give(g, h.item, h.qty, cx(tx), cy(ty), h.q)) return true;
   award(g, "farming", XP.harvest(ITEMS[h.item].sell) * h.qty);
+  questEvent(g, { act: "harvest" });
+  if (!g.s.stats.harvested[h.item]) diary(g, `Harvested my very first ${ITEMS[h.item].name}.`, "farm");
   g.s.stats.harvested[h.item] = (g.s.stats.harvested[h.item] ?? 0) + h.qty;
   g.s.soil[idx] = h.tile;
   syncSoil(g, idx);
@@ -285,6 +342,7 @@ function chop(g, o) {
         o.hp = 3;
         resolveObject(o, g.s.clock.season);
         give(g, "wood", has(g.s.professions, "lumberjack") ? 10 : 5, x, y);
+        if (o.variant === "ironwood") give(g, "ironwood", 2, x, y);
         award(g, "foraging", XP.tree);
         burst(FXK.LEAF, x, y - 40, 12, 90, 1.4, o.variant === "pine" ? "#4f9570" : "#8cc86a");
       } else {
@@ -309,16 +367,35 @@ function chop(g, o) {
     removeObj(g, o);
     give(g, "wood", 1, x, y);
   }
+  if (o.kind === "ore") {
+    o.hp--;
+    burst(FXK.CHIP, x, y - 10, 6, 80, 0.5, o.ore === "amber" ? "#f0a040" : o.ore === "moonstone" ? "#cfe8ff" : "#9a9aa8");
+    sfx(g, "rock");
+    if (o.hp > 0) return persist(g, o);
+    removeObj(g, o);
+    const [item, lo, hi] = ORE_YIELD[o.ore];
+    give(g, item, lo + Math.floor(Math.random() * (hi - lo + 1)), x, y);
+    give(g, "stone", 2, x, y);
+    award(g, "foraging", 12);
+  }
 }
 
 function eat(g) {
   const slot = selected(g);
   const def = ITEMS[slot.id];
-  if (g.s.energy >= MAX_ENERGY) return toast(g, "You're not hungry right now.");
+  const max = playerMaxHp(g);
+  if (g.s.energy >= MAX_ENERGY && (!def.hp || g.s.hp >= max) && !def.buff) return toast(g, "You're not hungry right now.");
   takeFromSlot(g.s.inv, g.s.sel);
   setEnergy(g, g.s.energy + def.energy);
+  if (def.buff) {
+    g.s.buff = { id: def.buff, day: today(g) };
+    toast(g, `${BUFFS[def.buff].name} for the rest of the day: ${BUFFS[def.buff].desc.toLowerCase()}.`, slot.id);
+  }
+  const healed = def.hp ? Math.min(max, g.s.hp + def.hp) - g.s.hp : 0;
+  g.s.hp += healed;
   sfx(g, "eat");
-  toast(g, `Yum! ${def.name} restored ${def.energy} energy.`, slot.id);
+  if (healed) burst(FXK.HEART, g.player.x, g.player.y - 40, 3, 30, 0.9);
+  toast(g, `Yum! ${def.name}: +${def.energy} energy${healed ? `, +${healed} health` : ""}.`, slot.id);
 }
 
 // ── Interaction (E) ─────────────────────────────────────────────────────────
@@ -363,7 +440,7 @@ export function updateTarget(g, tile) {
   const slot = selected(g);
   if (p.mounted) return;
   if (v) return show(pr, slot && isGiftable(slot.id) && g.s.rel[v.id].met ? "Give gift" : "Talk", v.x, v.y - 58);
-  if (near(g.pet, fx, fy, 24)) return show(pr, "Pet", g.pet.x, g.pet.y - 30);
+  if (near(g.pet, fx, fy, 24) && !usable(g.lv.at(tile[0], tile[1]))) return show(pr, slot && feedsPet(slot.id) && petWantsFood(g) ? `Feed ${g.pet.name}` : "Pet", g.pet.x, g.pet.y - 30);
   const hen = !coopWants(g, g.lv.at(tile[0], tile[1])) && chickenAt(g, fx, fy);
   if (hen) return show(pr, `Pet ${henOf(g, hen).name}`, hen.x, hen.y - 30);
   if (horseNear(g)) return show(pr, g.s.horse.name ? "Ride" : "Name horse", g.horse.x, g.horse.y - 80);
@@ -371,10 +448,18 @@ export function updateTarget(g, tile) {
   const ty = tile[1];
   const o = g.lv.at(tx, ty);
   if (o && !o.gone) {
+    if (o.kind === "chest") return show(pr, o.open ? "Empty" : "Open", o.x, o.y - 40);
+    if (o.kind === "herb") return show(pr, "Pick", o.x, o.y - 30);
+    if (o.kind === "questboard") return show(pr, "Jobs", o.x, o.y - 70);
+    if (o.kind === "raceflag") return show(pr, g.race ? "Cancel race" : "Race", o.x, o.y - 76);
+    if ((o.kind === "stall" || o.kind === "shopsign") && o.shop) return show(pr, "Shop", o.x, o.y - 60);
+    if (o.kind === "structure" && o.type === "farm_stand") return show(pr, "Stand", o.x, o.y - 60);
+    if (o.kind === "shrine") return show(pr, "Look", o.x, o.y - 90);
     if (o.kind === "bin") return show(pr, "Ship", o.x, o.y - 40);
     if (o.kind === "board" || (o.kind === "furniture" && o.build)) return show(pr, "Build", o.x, o.y - 56);
     if (o.kind === "furniture" && o.shop) return show(pr, "Shop", o.x, o.y - 56);
     if (o.kind === "furniture" && o.name === "bed") return show(pr, "Sleep", o.x, o.y - 70);
+    if (o.kind === "furniture" && o.name === "fireplace" && g.lv.id === "house") return show(pr, "Cook", o.x, o.y - 70);
     if (o.kind === "structure" && MACHINES[o.type]) {
       const st = coopState(g, o);
       const m = MACHINES[o.type];
@@ -400,18 +485,27 @@ export function interact(g) {
   const [fx, fy] = frontPoint(p);
   const v = villagerAt(g, fx, fy);
   if (v) return chat(g, v);
-  if (near(g.pet, fx, fy, 24)) return petPet(g);
+  if (near(g.pet, fx, fy, 24) && !usable(g.lv.at(g.target[0], g.target[1]))) return slot0(g) && feedsPet(slot0(g).id) && petWantsFood(g) ? feed(g) : petPet(g);
   const hen = !coopWants(g, g.lv.at(g.target[0], g.target[1])) && chickenAt(g, fx, fy);
   if (hen) return petChicken(g, hen);
   if (horseNear(g)) return toggleMount(g);
   const [tx, ty] = g.target;
   const o = g.lv.at(tx, ty);
   if (o && !o.gone) {
+    if (o.kind === "chest") return openChest(g, o);
+    if (o.kind === "herb") return pickHerb(g, o);
+    if (o.kind === "questboard") return g.ui.questBoard();
+    if (o.kind === "raceflag") return flagInteract(g, o);
+    if ((o.kind === "stall" || o.kind === "shopsign") && o.shop) return g.ui.shop(o.shop);
+    if (o.kind === "stall") return toast(g, "An empty market stall. Someone sets up here on Saturdays.");
+    if (o.kind === "structure" && o.type === "farm_stand") return g.ui.stand(g.s.structures.find((st) => st.uid === o.uid), o);
+    if (o.kind === "shrine") return toast(g, g.s.flags.gloomroot ? "The Moon Shrine glows softly. The Wildwood is at peace." : "Dark vines choke the old shrine. Its crescent is cold.");
     if (o.kind === "bin") return ship(g);
     if (o.kind === "board" || (o.kind === "furniture" && o.build)) return g.ui.buildMenu();
-    if (o.kind === "furniture" && o.shop) return g.ui.shop();
+    if (o.kind === "furniture" && o.shop) return g.ui.shop(o.shop === true ? "mira" : o.shop);
     if (o.kind === "furniture" && o.name === "bed") return g.ui.confirm("Go to bed and end the day?", "Sleep", "Not yet", () => (progress(g, "sleep"), sleep(g)));
     if (o.kind === "structure" && o.type === "coop") return tendCoop(g, o);
+    if (o.kind === "furniture" && o.name === "fireplace" && g.lv.id === "house") return g.ui.cook();
     if (o.kind === "structure" && MACHINES[o.type]) return tendMachine(g, o);
   }
   if (g.lv.id === "world") {
@@ -500,6 +594,56 @@ function tendCoop(g, o) {
   toast(g, `Stocked ${r.used} ${ITEMS[slot.id].name} · ${st.hay}/${COOP_HAY_CAP} hay`, slot.id);
 }
 
+const slot0 = (g) => g.s.inv[g.s.sel];
+const USABLE = new Set(["chest", "questboard", "raceflag", "stall", "shopsign", "bin", "board", "herb", "shrine"]);
+/** Something you're facing that E does something with: it wins over petting a companion in the way. */
+const usable = (o) => !!o && !o.gone && (USABLE.has(o.kind) || (o.kind === "furniture" && !!(o.shop || o.build || o.name === "bed" || o.name === "fireplace")) || (o.kind === "structure" && (o.type === "coop" || o.type === "farm_stand" || !!MACHINES[o.type])));
+const feedsPet = (id) => ITEMS[id].kind === "treat" || ITEMS[id].kind === "food";
+const petWantsFood = (g) => g.s.pet.hp < petMaxHp(g.s.pet.lvl) || g.s.pet.full < 100;
+
+/** Share food with your companion: heals them and fills them up. */
+function feed(g) {
+  const slot = slot0(g);
+  const r = feedPet(g.s.pet, ITEMS[slot.id]);
+  if (r.error) return toast(g, `${g.pet.name} is full and happy.`);
+  takeFromSlot(g.s.inv, g.s.sel);
+  g.s.pet = r.pet;
+  g.s.pet.happy = Math.min(100, (g.s.pet.happy ?? 0) + 5);
+  const a = g.pet;
+  a.state = "sit";
+  a.stateT = 1.5;
+  sfx(g, "eat");
+  burst(FXK.HEART, a.x, a.y - 22, 4, 30, 1.1);
+  toast(g, `${a.name} gobbles the ${ITEMS[slot.id].name}!${r.healed ? ` +${r.healed} health` : ""}`, slot.id);
+}
+
+/** Open a Wildwood chest: loot from its table (refills in a week). */
+function openChest(g, o) {
+  if (o.open) return toast(g, "Empty. It'll have something new in a few days.");
+  const table = CHEST_LOOT[o.rare ? "rare" : "common"];
+  const picks = o.rare ? 2 : 1;
+  o.open = true;
+  resolveObject(o, g.s.clock.season);
+  persist(g, o);
+  sfx(g, "chest");
+  burst(FXK.SPARK, o.x, o.y - 20, 14, 100, 0.9, o.rare ? "#f6c63c" : "#fff2a0");
+  for (let i = 0; i < picks; i++) {
+    const [id, lo, hi] = table[Math.floor(Math.random() * table.length)];
+    const n = lo + Math.floor(Math.random() * (hi - lo + 1));
+    if (id === "gold") {
+      g.s.gold += n;
+      toast(g, `+${n}g`);
+    } else give(g, id, n, o.x, o.y);
+  }
+}
+
+function pickHerb(g, o) {
+  if (!give(g, "silverleaf", 1, o.x, o.y)) return;
+  removeObj(g, o);
+  award(g, "foraging", XP.forage);
+  sfx(g, "pickup");
+}
+
 function petPet(g) {
   const a = g.pet;
   const d = today(g);
@@ -566,6 +710,13 @@ export function toggleMount(g) {
 
 // ── Villagers ───────────────────────────────────────────────────────────────
 
+/** The Cheerful buff: friendship gained today counts half again. */
+function cheer(g, before, after) {
+  const k = buffNow(g)?.friend;
+  if (!k || after.pts <= before.pts) return after;
+  return { ...after, pts: Math.min(1000, before.pts + Math.round((after.pts - before.pts) * k)) };
+}
+
 function chat(g, v) {
   progress(g, "talk");
   sfx(g, "talk");
@@ -575,25 +726,28 @@ function chat(g, v) {
   v.pause = 4;
   const p = g.player;
   v.dir = Math.abs(p.x - v.x) > Math.abs(p.y - v.y) ? (p.x < v.x ? "left" : "right") : p.y < v.y ? "up" : "down";
-  const vars = { name: g.s.profile.name, farm: g.s.profile.farm };
+  const vars = { name: g.s.profile.name, farm: g.s.profile.farm, pet: g.s.profile.pet.name };
   if (slot && isGiftable(slot.id) && rel.met) {
     const r = gift(rel, slot.id, v.def, d, slot.q);
     if (r.refused) return g.ui.dialogue(v, [`You've already given ${v.def.name} a gift today.`]);
-    g.s.rel[v.id] = r.rel;
+    g.s.rel[v.id] = cheer(g, rel, r.rel);
     takeFromSlot(g.s.inv, g.s.sel);
     if (r.delta > 0) burst(FXK.HEART, v.x, v.y - 50, r.taste === "love" ? 6 : 3, 40, 1.2);
     return g.ui.dialogue(v, [GIFT_LINES[v.id][r.taste]]);
   }
+  if (!(slot && isGiftable(slot.id)) && questChat(g, v)) return;
   const ev = (HEART_EVENTS[v.id] ?? []).find((e) => eventReady(rel, e));
   if (ev) {
     g.s.rel[v.id] = { ...rel, events: { ...rel.events, [ev.hearts]: true } };
     sfx(g, "heart");
+    diary(g, `Shared a quiet moment with ${v.def.name}.`, "friend");
     return g.ui.dialogue(v, ev.lines.map((l) => fillLine(l, vars)), () => ev.reward && give(g, ev.reward, ev.n ?? 1, p.x, p.y), true);
   }
   const ctx = { season: g.s.clock.season, weather: g.s.weather, hearts: hearts(rel), day: d, met: rel.met };
   const line = fillLine(pickLine(LINES[v.id], ctx), vars);
   const r = talk(rel, d);
-  g.s.rel[v.id] = { ...r.rel, met: true };
+  if (!rel.met) diary(g, `Met ${v.def.name}, the ${v.def.role.toLowerCase()}.`, "friend");
+  g.s.rel[v.id] = { ...cheer(g, rel, r.rel), met: true };
   if (r.gained) burst(FXK.HEART, v.x, v.y - 50, 2, 30, 1);
   g.ui.dialogue(v, [line]);
 }

@@ -8,7 +8,9 @@
 import { TILE, TICK_SECONDS, TICK_MIN, ZOOM, ZOOM_MIN, ZOOM_MAX, HOTBAR, MAX_ENERGY } from "./config.js";
 import { newState, save } from "./state.js";
 import { buildWorld, HIDDEN, INTERIORS } from "./world/map.js";
-import { createWorldLevel, createInterior, makeObject } from "./world/level.js";
+import { createWorldLevel, createInterior, createOutdoorLevel, makeObject } from "./world/level.js";
+import { buildWildwood, WILD_GATE, WILD_SPAWN, WORLD_FROM_WILD, PLACES } from "./world/wildwood.js";
+import { buildSunridge, SUN_GATE, SUN_SPAWN, WORLD_FROM_SUN } from "./world/sunridge.js";
 import { GroundCache } from "./world/ground.js";
 import { createCamera, snapCamera, updateCamera } from "./world/camera.js";
 import { updateFx, spawnFx, FXK } from "./world/weather.js";
@@ -33,10 +35,29 @@ import { updateFishing } from "./fishing.js";
 import { renderGame } from "./render.js";
 import { toast, updateHud, hotbarSlotAt } from "./ui/hud.js";
 import { toggleMinimap } from "./ui/minimap.js";
-import { queueIntro, updateIntro, updateProfessions, playFinale } from "./progress.js";
+import { queueIntro, updateIntro, updateProfessions, playFinale, diary } from "./progress.js";
 import { sfx } from "./audio/sfx.js";
+import { resetCombat, updateCombat, questEvent, playerMaxHp, playerStats, attack, playerLook, refreshLook, buffNow } from "./combat.js";
+import { petNight } from "./rules/combat.js";
+import { standSales, careerRank, careerMult } from "./rules/careers.js";
+import { sellPrice } from "./rules/quality.js";
+import { rollBoard } from "./rules/quests.js";
+import { createHerd, updateHerd } from "./actors/herd.js";
+import { updateFetch } from "./fetch.js";
+import { updateRace } from "./race.js";
 
 const WORLD_DATA = buildWorld(7);
+const SEASON_NAMES = ["Spring", "Summer", "Fall", "Winter"];
+const WILD_DATA = buildWildwood(11);
+const SUN_DATA = buildSunridge(23);
+/** Outdoor levels besides the world, whose object state lives in `s.lvobjs[id]`. */
+export const OUTDOOR = ["wildwood", "sunridge"];
+
+/** Saved per-object state (chopped, broken, opened) for a level. */
+export function objStore(g, id) {
+  if (id === "world") return g.s.objs;
+  return (g.s.lvobjs[id] ??= {});
+}
 
 export function createGame(input, ui) {
   const g = {
@@ -82,29 +103,48 @@ export function createGame(input, ui) {
 export function loadState(g, s) {
   g.s = s;
   g._pq = null;
-  const world = createWorldLevel(WORLD_DATA);
-  g.levels = { world };
+  const world = createWorldLevel(WORLD_DATA, [
+    [WILD_GATE.world, "wildwood", { tx: WILD_SPAWN.tx, ty: WILD_SPAWN.ty, dir: "up", enter: "up" }],
+    [SUN_GATE.world, "sunridge", { tx: SUN_SPAWN.tx, ty: SUN_SPAWN.ty, dir: "down", enter: "down" }],
+  ]);
+  g.levels = {
+    world,
+    wildwood: createOutdoorLevel("wildwood", WILD_DATA, [[WILD_GATE.wild, "world", { tx: WORLD_FROM_WILD.tx, ty: WORLD_FROM_WILD.ty, dir: "down", enter: "down" }]]),
+    sunridge: createOutdoorLevel("sunridge", SUN_DATA, [[SUN_GATE.sun, "world", { tx: WORLD_FROM_SUN.tx, ty: WORLD_FROM_SUN.ty, dir: "up", enter: "up" }]]),
+  };
+  g.levels.wildwood.spawns = WILD_DATA.spawns;
   for (const id in INTERIORS) g.levels[id] = createInterior(id);
-  g.ground?.release();
-  g.ground = new GroundCache(world);
+  for (const gc of Object.values(g.grounds ?? {})) gc.release();
+  g.grounds = {};
+  for (const id of ["world", ...OUTDOOR]) g.grounds[id] = new GroundCache(g.levels[id]);
+  g.ground = g.grounds.world;
   g.rooms.clear();
-  // World object overrides (chopped, broken, regrowing).
-  for (const o of world.objects) {
-    const st = s.objs[o.id];
-    if (!st) continue;
-    if (st.gone) world.index(o, null), (o.gone = true);
-    if (st.stump) o.stump = true;
-    if (st.hp !== undefined) o.hp = st.hp;
+  // Object overrides (chopped, broken, opened, regrowing) for every outdoor level.
+  for (const id of ["world", ...OUTDOOR]) {
+    const lv = g.levels[id];
+    const store = objStore(g, id);
+    for (const o of lv.objects) {
+      const st = store[o.id];
+      if (!st) continue;
+      if (st.gone) lv.index(o, null), (o.gone = true);
+      if (st.stump) o.stump = true;
+      if (st.open) o.open = true;
+      if (st.hp !== undefined) o.hp = st.hp;
+    }
   }
+  resetCombat(g);
   g.chickens = [];
   for (const st of s.structures) addStructureObject(g, st);
   fenceMasks(g);
+  fenceMasks(g, g.levels.sunridge);
   if (!Object.keys(s.forage).length) s.forage = respawnForage({}, g.spots, dayIndex(s.clock), s.clock.season, FORAGE, RARE_FORAGE);
-  g.player = createPlayer(s.profile.look);
+  g.player = createPlayer(playerLook(s));
+  refreshLook(g);
   Object.assign(g.player, { x: s.player.x, y: s.player.y, dir: s.player.dir, mounted: !!s.horse.mounted });
   g.pet = createPet(s.profile.pet);
   g.horse = { x: s.horse.x, y: s.horse.y, dir: s.horse.dir, level: s.horse.level };
   g.villagers = VILLAGER_IDS.map((id) => createVillager(id, VILLAGERS[id]));
+  g.herd = createHerd();
   for (const v of g.villagers) placeVillager(v, s.clock.min, routineCtx(s));
   g.lv = g.levels[s.player.level] ?? world;
   teleportPet(g.pet, g.player, g.lv);
@@ -133,6 +173,7 @@ export function addStructureObject(g, st) {
   }
   if (st.type === "well") o.y = (st.ty + 2) * TILE - 4;
   if (MACHINES[st.type]) o.busy = !!st.input;
+  if (st.type === "farm_stand") o.busy = !!st.stock?.some(Boolean);
   lv.add(o);
   resolveObject(o, g.s.clock.season);
   return o;
@@ -146,7 +187,7 @@ export function resolveSeason(g) {
     resolveObject(o, season);
     if (id === "world" && o.spr) warm[o.key] = o.spr;
   }
-  g.ground.setSeason(season);
+  for (const gc of Object.values(g.grounds)) gc.setSeason(season);
   warmSvgSprites(warm, DEFS, g.cam.z * (g.view.k || 1));
 }
 
@@ -247,12 +288,27 @@ export function sleep(g, passedOut = false) {
     g,
     () => {
       const before = g.s.clock.season;
-      const { state, report } = endDay(g.s, { crops: CROPS, items: ITEMS, w: g.levels.world.w, spots: g.spots, forage: FORAGE, rareForage: RARE_FORAGE, passedOut, mult: (id) => sellMult(g.s.professions, id, ITEMS[id]) });
+      const stand = runStands(g);
+      const { state, report } = endDay(g.s, { crops: CROPS, items: ITEMS, w: g.levels.world.w, spots: g.spots, forage: FORAGE, rareForage: RARE_FORAGE, passedOut, mult: (id) => sellMult(g.s.professions, id, ITEMS[id]) * careerMult(g.s, id, ITEMS[id]) });
       g.s = state;
       g.s.stats.earned += report.total;
+      if (stand.total) {
+        g.s.gold += stand.total;
+        g.s.stats.standSales = (g.s.stats.standSales ?? 0) + stand.total;
+        report.stand = stand;
+      }
+      // A night's sleep heals you; your companion rests but gets hungry.
+      g.s.hp = passedOut ? Math.ceil(playerMaxHp(g) / 2) : playerMaxHp(g);
+      g.s.pet = petNight(g.s.pet);
+      g.s.quests = rollBoard(g.s.quests, dayIndex(g.s.clock));
+      resetCombat(g);
       // Your companion's wishes that came true today, and what they dreamed.
       report.wishes = newWishes(g.s, WISHES);
-      for (const id of report.wishes) g.s.dreams = { ...g.s.dreams, [id]: true };
+      for (const id of report.wishes) {
+        g.s.dreams = { ...g.s.dreams, [id]: true };
+        diary(g, `${g.s.profile.pet.name}'s wish came true: ${WISHES.find((w) => w.id === id).title}.`, "wish");
+      }
+      if (report.seasonChanged) diary(g, `${SEASON_NAMES[g.s.clock.season]} arrived in the Hollow.`, "season");
       report.petDream = petDream(dayIndex(g.s.clock), g.s.pet.happy, PET_DREAMS);
       regrowWorld(g);
       for (const o of g.levels.world.objects) if (o.kind === "structure" && MACHINES[o.type]) {
@@ -286,27 +342,52 @@ export function sleep(g, passedOut = false) {
   );
 }
 
+/** Overnight Farm Stand sales across every stand you've placed. */
+function runStands(g) {
+  const rank = careerRank(g.s, "merchant");
+  const rain = g.s.weather === "rain";
+  const price = (id, q) => Math.round(sellPrice(ITEMS[id].sell ?? 0, q) * careerMult(g.s, id, ITEMS[id]));
+  let total = 0;
+  const lines = [];
+  for (const st of g.s.structures) {
+    if (st.type !== "farm_stand" || !st.stock?.some(Boolean)) continue;
+    const r = standSales(st.stock, rank, price, Math.random, rain);
+    st.stock = r.stock;
+    total += r.total;
+    lines.push(...r.sold);
+  }
+  for (const o of g.levels.world.objects) if (o.type === "farm_stand") {
+    o.busy = !!g.s.structures.find((st) => st.uid === o.uid)?.stock?.some(Boolean);
+    resolveObject(o, g.s.clock.season);
+  }
+  return { total, lines };
+}
+
 function placeHorseAtStable(g) {
   g.horse.x = 5.5 * TILE;
   g.horse.y = 25.6 * TILE;
   g.horse.dir = "right";
 }
 
-/** Daily regrowth: stumps become trees, broken rocks return. */
+/** Daily regrowth: stumps become trees, broken rocks and ore return, chests refill, herbs regrow. */
 function regrowWorld(g) {
   const day = dayIndex(g.s.clock);
-  const lv = g.levels.world;
-  for (const o of lv.objects) {
-    const st = g.s.objs[o.id];
-    if (!st || st.back === undefined || st.back > day) continue;
-    if (lv.at(o.tx, o.ty) && lv.at(o.tx, o.ty) !== o) continue;
-    if (g.s.soil[o.ty * lv.w + o.tx]) continue;
-    o.gone = false;
-    o.stump = false;
-    o.hp = o.kind === "tree" ? 6 : o.small ? 1 : 4;
-    lv.index(o, o);
-    delete g.s.objs[o.id];
-    resolveObject(o, g.s.clock.season);
+  for (const id of ["world", ...OUTDOOR]) {
+    const lv = g.levels[id];
+    const store = objStore(g, id);
+    for (const o of lv.objects) {
+      const st = store[o.id];
+      if (!st || st.back === undefined || st.back > day) continue;
+      if (lv.at(o.tx, o.ty) && lv.at(o.tx, o.ty) !== o) continue;
+      if (id === "world" && g.s.soil[o.ty * lv.w + o.tx]) continue;
+      o.gone = false;
+      o.stump = false;
+      o.open = false;
+      o.hp = o.hp0;
+      lv.index(o, o);
+      delete store[o.id];
+      resolveObject(o, g.s.clock.season);
+    }
   }
 }
 
@@ -345,6 +426,13 @@ export function update(g, dt, t) {
   }
 
   if (g.ui.isOpen()) return;
+  // Hit-stop: a few frozen frames sell an impact; a swing pressed meanwhile is kept.
+  if (g.hitStop > 0) {
+    g.hitStop -= dt;
+    if (input.pressed("use")) g.bufferedUse = true;
+    if (input.pressed("attack")) g.bufferedAttack = true;
+    return;
+  }
 
   if (g.mode === "build") {
     updateBuild(g, dt);
@@ -361,10 +449,11 @@ export function update(g, dt, t) {
   updateProfessions(g);
 
   if (input.pressed("pause")) return g.ui.pause();
-  if (input.pressed("journal")) return g.ui.journal("friends");
+  if (input.pressed("journal")) return g.ui.journal("diary");
   if (input.pressed("craft")) return g.ui.journal("craft");
   if (input.pressed("friends")) return g.ui.journal("friends");
   if (input.pressed("inventory")) return g.ui.journal("items");
+  if (input.pressed("character")) return g.ui.character();
 
   // Hotbar selection.
   for (let i = 0; i < HOTBAR; i++) if (input.pressed(SLOT_KEYS[i])) g.s.sel = i;
@@ -377,7 +466,7 @@ export function update(g, dt, t) {
   const ax = input.axis("left", "right");
   const ay = input.axis("up", "down");
   p.sprinting = input.down("sprint");
-  if (movePlayer(p, g.lv, ax, ay, dt, moveMult(p, p.sprinting)) && p.sprinting && !p.mounted && !p.biking && Math.random() < dt * 14) spawnFx(FXK.DUST, p.x - (ax || 0) * 8, p.y, -(ax || 0) * 20, -10, 0.35, "rgba(200,170,130,0.6)");
+  if (movePlayer(p, g.lv, ax, ay, dt, moveMult(p, p.sprinting) * (p.mounted || p.biking ? 1 : playerStats(g).spd)) && p.sprinting && !p.mounted && !p.biking && Math.random() < dt * 14) spawnFx(FXK.DUST, p.x - (ax || 0) * 8, p.y, -(ax || 0) * 20, -10, 0.35, "rgba(200,170,130,0.6)");
   if (input.pressed("bike")) toggleBike(g);
   // Soft footsteps, twice per walk cycle (not on the horse or the bike).
   if (p.moving && !p.mounted && !p.biking) {
@@ -400,11 +489,18 @@ export function update(g, dt, t) {
   updateTarget(g, facingTile(p, TGT));
   const slotClicked = input.mouse.clicked ? hotbarSlotAt(g.view, input.mouse.x, input.mouse.y) : -1;
   if (slotClicked >= 0) (g.s.sel = slotClicked), (g.hudFlash = 1.2);
-  else if (input.pressed("use") || input.mouse.clicked) useTool(g); // mouse.clicked only fires on the canvas itself
+  else if (input.pressed("use") || input.mouse.clicked || g.bufferedUse) useTool(g); // mouse.clicked only fires on the canvas itself
+  if (input.pressed("attack") || g.bufferedAttack) attack(g);
+  g.bufferedUse = g.bufferedAttack = false;
   if (input.pressed("interact") || input.mouse.rightClicked) interact(g);
   if (input.pressed("mount")) toggleMount(g);
 
+  updateCombat(g, dt, t);
+  if (g.mode !== "play") return;
+  updateFetch(g, dt);
+  updateRace(g, dt);
   updatePet(g.pet, p, g.lv, dt, t);
+  if (g.lv.id === "sunridge") updateHerd(g.herd, g.lv, dt);
   for (const v of g.villagers) updateVillager(v, g.s.clock.min, routineCtx(g.s), g.levels, dt);
   if (g.lv.id === "world") for (const c of g.chickens) updateChicken(c, g.lv, dt);
   for (const o of g.lv.objects) if (o.shake > 0) o.shake = Math.max(0, o.shake - dt);
@@ -420,6 +516,8 @@ function advanceClock(g, dt) {
     g.tickAcc -= TICK_SECONDS;
     const r = tick(g.s.clock);
     g.s.clock = r.clock;
+    const regen = buffNow(g)?.regen;
+    if (regen) setEnergy(g, g.s.energy + regen);
     if (g.s.clock.min === 22 * 60) toast(g, "It's getting late... time for bed soon.");
     if (r.passOut) {
       g.mode = "fade";
@@ -440,6 +538,11 @@ function checkDoors(g, ax, ay) {
   const ty = Math.floor((p.y - 2) / TILE);
   const door = lv.doors.get(ty * lv.w + tx);
   if (door && !p.mounted) {
+    // Edge gates need you to walk through them; building doors let you out whichever way you step.
+    if (door.enter) {
+      if (door.enter === "down" ? ay > 0 : ay < 0) goTo(g, door.to, door.tx, door.ty, door.dir);
+      return;
+    }
     const into = door.to === "world" ? ay > 0 : ay < 0;
     if (into || door.to === "world") goTo(g, door.to, door.tx, door.ty, door.dir);
     return;
@@ -455,6 +558,7 @@ function checkDoors(g, ax, ay) {
 }
 
 function checkHidden(g) {
+  if (g.lv.id === "wildwood") return checkPlaces(g);
   if (g.lv.id !== "world") return;
   const tx = Math.floor(g.player.x / TILE);
   const ty = Math.floor(g.player.y / TILE);
@@ -462,7 +566,28 @@ function checkHidden(g) {
     if (g.s.flags.found[h.id] || tx < h.x0 || tx > h.x1 || ty < h.y0 || ty > h.y1) continue;
     g.s.flags.found[h.id] = true;
     toast(g, `You discovered ${h.name}!`, "star_shard");
+    diary(g, `Discovered ${h.name}.`, "place");
   }
+}
+
+/** Wildwood places: a toast the first time, and a quest event every visit. */
+function checkPlaces(g) {
+  const tx = Math.floor(g.player.x / TILE);
+  const ty = Math.floor(g.player.y / TILE);
+  for (const id in PLACES) {
+    const r = PLACES[id];
+    if (tx < r.x0 || tx > r.x1 || ty < r.y0 || ty > r.y1) continue;
+    if (g.placeNow === id) return;
+    g.placeNow = id;
+    if (!g.s.flags.found[id]) {
+      g.s.flags.found[id] = true;
+      toast(g, `You found ${r.name}!`, "star_shard");
+      diary(g, `Found ${r.name} in the Wildwood.`, "place");
+    }
+    questEvent(g, { visit: id });
+    return;
+  }
+  g.placeNow = null;
 }
 
 /** Refresh the facing tile now (scripted actions outside the frame loop). */

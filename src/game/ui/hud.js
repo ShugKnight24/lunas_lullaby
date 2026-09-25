@@ -16,9 +16,12 @@ import { sellMult } from "../rules/skills.js";
 import { TUTORIAL } from "../data/tutorial.js";
 import { FARM_WELL, BIN } from "../world/map.js";
 import { doorOf } from "../actors/actors.js";
-import { drawMinimap, minimapRect } from "./minimap.js";
+import { drawMinimap, minimapRect, mapLevel } from "./minimap.js";
 import { drawSvgSprite } from "../../engine/sprite.js";
 import { DEFS, iconSpr, iconKey } from "../art/index.js";
+import { HEART, petMaxHp } from "../rules/combat.js";
+import { playerMaxHp, buffNow } from "../combat.js";
+import { drawRaceHud } from "../race.js";
 
 export const INK = "#3a2530";
 const CREAM = "#fff6e6";
@@ -141,7 +144,7 @@ function qualityStar(ctx, q, x, y) {
 }
 
 // Cached HUD strings.
-const cache = { min: -1, time: "", day: -1, date: "", season: "", gold: -1, goldS: "", bin: null, binS: "", energy: -1, energyS: "" };
+const cache = { min: -1, time: "", day: -1, date: "", season: "", gold: -1, goldS: "", bin: null, binS: "", energy: -1, energyS: "", pet: null, petS: "" };
 
 function strings(g) {
   const c = g.s.clock;
@@ -167,6 +170,11 @@ function strings(g) {
   if (g.s.energy !== cache.energy) {
     cache.energy = g.s.energy;
     cache.energyS = String(Math.round(g.s.energy));
+  }
+  if (g.s.pet !== cache.pet) {
+    cache.pet = g.s.pet;
+    const p = g.s.pet;
+    cache.petS = `${g.pet.name} · Lv ${p.lvl}${p.hp <= 0 ? " · hurt" : p.full < 20 ? " · hungry" : ""}`;
   }
 }
 
@@ -391,8 +399,8 @@ function drawPrompt(ctx, g, ox, oy, z, k) {
   text(ctx, pr.text, Math.round(x - w / 2) + 31, Math.round(y - 9), F.small);
 }
 
-function drawToasts(ctx, view, g, t, k) {
-  let y = 16;
+function drawToasts(ctx, view, g, t, k, top = 16) {
+  let y = top;
   for (const m of g.toasts) {
     const a = Math.min(1, m.t * 2, (3.2 - m.t) * 6);
     ctx.globalAlpha = a;
@@ -490,6 +498,104 @@ function drawFishingBar(ctx, g, ox, oy, z, k) {
   text(ctx, "Space!", x, by - 6, F.small, "#fff", "center");
 }
 
+// ── Health: Zelda-style hearts, your companion's bar and the boss bar ──
+
+const HEART_PATH = new Path2D("M0 3C-2 -1 -8 -1 -8 4C-8 8 -3 11 0 14C3 11 8 8 8 4C8 -1 2 -1 0 3Z");
+
+function heartShape(ctx, x, y, s, fill) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  ctx.fillStyle = fill;
+  ctx.fill(HEART_PATH);
+  ctx.lineWidth = 2 / s;
+  ctx.strokeStyle = INK;
+  ctx.stroke(HEART_PATH);
+  ctx.restore();
+}
+
+function drawVitals(ctx, view, g, t, k) {
+  const s = g.s;
+  const max = playerMaxHp(g);
+  const wild = g.lv.id === "wildwood";
+  const armed = !!s.equip.weapon;
+  drawBossBar(ctx, view, g);
+  if (!wild && !armed && s.hp >= max) return 16;
+  const n = Math.ceil(max / HEART);
+  const size = view.w < 640 ? 0.95 : 1.15;
+  const gap = 19 * size;
+  const x0 = view.w / 2 - ((n - 1) * gap) / 2;
+  const y = 16;
+  const low = s.hp <= max * 0.25;
+  // Your weapon, with its key, just left of the hearts.
+  if (armed) {
+    const wx = x0 - gap - 8;
+    blitPanel(ctx, 34, 34, 12, wx - 17, y - 12, k);
+    icon(ctx, s.equip.weapon, wx, y + 5, 0.75, t);
+    outlined(ctx, "Q", wx + 14, y + 22, F.tiny, "#fff", "center");
+  }
+  for (let i = 0; i < n; i++) {
+    const fillFrac = Math.max(0, Math.min(1, (s.hp - i * HEART) / HEART));
+    const pulse = low && fillFrac > 0 ? 1 + Math.sin(t * 9) * 0.08 : 1;
+    const x = x0 + i * gap;
+    heartShape(ctx, x, y, size * pulse, "rgba(58,37,48,0.35)");
+    if (fillFrac <= 0) continue;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x - 9 * size, y - 4 * size, 18 * size * fillFrac, 20 * size);
+    ctx.clip();
+    heartShape(ctx, x, y, size * pulse, "#f0566a");
+    ctx.restore();
+  }
+  // Your companion: a small bar under the hearts.
+  const pet = s.pet;
+  if (wild || pet.hp < petMaxHp(pet.lvl)) {
+    const w = Math.max(90, n * gap * 0.7);
+    const bx = view.w / 2 - w / 2;
+    const by = y + 24 * size;
+    ctx.fillStyle = "rgba(58,37,48,0.55)";
+    ctx.beginPath();
+    ctx.roundRect(bx - 2, by - 2, w + 4, 10, 5);
+    ctx.fill();
+    const f = pet.hp / petMaxHp(pet.lvl);
+    ctx.fillStyle = pet.full < 20 ? "#b8a0c8" : f > 0.3 ? "#f6a0b8" : "#f0706a";
+    ctx.beginPath();
+    ctx.roundRect(bx, by, Math.max(0, w * f), 6, 3);
+    ctx.fill();
+    outlined(ctx, cache.petS ?? "", view.w / 2, by + 22, F.tiny, "#fff", "center");
+    return by + 34;
+  }
+  return y + 30 * size;
+}
+
+/** The boss's health, just above the hotbar. */
+/** Today's dish buff, under the gold. */
+function drawBuff(ctx, view, g) {
+  const b = buffNow(g);
+  if (!b) return;
+  if (cache.buff !== b) (cache.buff = b), (cache.buffS = `✦ ${b.name} today`);
+  // Below the gold chip (14 + 96 + 10 + 36) and tonight's shipping chip when it shows.
+  outlined(ctx, cache.buffS ?? "", view.w - 22, cache.binS ? 214 : 178, F.small, "#fff2a0", "right");
+}
+
+function drawBossBar(ctx, view, g) {
+  const boss = g.boss;
+  if (boss?.alive) {
+    const w = Math.min(420, view.w - 80);
+    const bx = view.w / 2 - w / 2;
+    const by = hotbarRect(view).y - 30;
+    outlined(ctx, "The Gloomroot", view.w / 2, by - 6, F.mid, "#fff", "center");
+    ctx.fillStyle = "rgba(58,37,48,0.8)";
+    ctx.beginPath();
+    ctx.roundRect(bx - 3, by - 1, w + 6, 16, 8);
+    ctx.fill();
+    ctx.fillStyle = boss.enraged ? "#e8566a" : "#9a6ad8";
+    ctx.beginPath();
+    ctx.roundRect(bx, by + 2, Math.max(0, (w * boss.hp) / boss.max), 10, 5);
+    ctx.fill();
+  }
+}
+
 export function drawHud(ctx, view, g, t, ox, oy, z) {
   if (g.mode === "title") return;
   const m = ctx.getTransform();
@@ -502,7 +608,10 @@ export function drawHud(ctx, view, g, t, ox, oy, z) {
   if (g.mode === "fishing") drawFishingBar(ctx, g, ox, oy, z, k);
   drawClock(ctx, view, g, k);
   drawEnergy(ctx, view, g, k);
-  if (g.mode === "play" || g.mode === "fishing") drawMinimap(ctx, g, t, minimapRect(view, hotbarRect(view), g.levels.world), (w, h, x, y) => blitPanel(ctx, w, h, 14, x, y, k), tutorialPoint(g, true));
+  const top = drawVitals(ctx, view, g, t, k);
+  drawBuff(ctx, view, g);
+  drawRaceHud(ctx, view, g, ox, oy, z, (c, s, x, y, font) => outlined(c, s, x, y, font, "#fff", "center"));
+  if (g.mode === "play" || g.mode === "fishing") drawMinimap(ctx, g, t, minimapRect(view, hotbarRect(view), mapLevel(g)), (w, h, x, y) => blitPanel(ctx, w, h, 14, x, y, k), tutorialPoint(g, true));
   drawHotbar(ctx, view, g, t, k);
-  drawToasts(ctx, view, g, t, k);
+  drawToasts(ctx, view, g, t, k, top);
 }

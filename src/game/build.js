@@ -17,6 +17,7 @@ import { GR, inFarm, FARM } from "./world/map.js";
 import { snapCamera, updateCamera } from "./world/camera.js";
 import { resolveObject } from "./art/index.js";
 import { addStructureObject } from "./game.js";
+import { questEvent } from "./combat.js";
 import { burst, FXK } from "./world/weather.js";
 import { toast } from "./ui/hud.js";
 
@@ -166,6 +167,7 @@ export function placeStructure(g, type, tx, ty) {
   burst(FXK.DUST, o.x, o.y, 10, 60, 0.6, "rgba(200,170,130,0.8)");
   sfx(g, "build");
   award(g, "building", XP.build(def.cost));
+  questEvent(g, { act: "build" });
   return true;
 }
 
@@ -185,6 +187,7 @@ export function removeStructure(g, o, refundIt) {
     if (def.item) addItem(g.s.inv, def.item);
     if (st.input) addItem(g.s.inv, st.input, 1, st.q);
     if (st.out) addItem(g.s.inv, st.out, 1, st.q);
+    for (const x of st.stock ?? []) if (x) addItem(g.s.inv, x.id, x.n, x.q ?? 0);
   }
   fenceMasks(g);
   return st;
@@ -199,8 +202,7 @@ function placeBack(g) {
 }
 
 /** Recompute fence connection masks (fixed fences and built ones). */
-export function fenceMasks(g) {
-  const lv = world(g);
+export function fenceMasks(g, lv = world(g)) {
   // Every fence style (and gates) joins up with the others and the farm's own fences.
   const fencey = (o) => !!(o && !o.gone && (o.kind === "fence" || (o.kind === "structure" && STRUCTURES[o.type]?.fence)));
   const isFence = (x, y) => fencey(lv.at(x, y));
