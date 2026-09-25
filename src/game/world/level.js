@@ -5,7 +5,7 @@
  */
 
 import { TILE } from "../config.js";
-import { GR, BUILDING_SPOTS, INTERIORS } from "./map.js";
+import { GR, ALL_SPOTS, INTERIORS } from "./map.js";
 import { BUILDINGS } from "../art/props.js";
 
 /** Tile footprint (w, h) and whether the object blocks movement, per kind. */
@@ -15,6 +15,10 @@ const KINDS = {
   lamp: [1, 1, true], bench: [1, 1, true], barrel: [1, 1, true], planter: [1, 1, true], fence: [1, 1, true],
   well: [2, 2, true], building: [0, 0, true], furniture: [1, 1, true],
   structure: [1, 1, true],
+  // Wildwood, Sunridge and the bigger town.
+  shrine: [3, 2, true], arch: [2, 1, false], chest: [1, 1, true], ore: [1, 1, true], herb: [1, 1, false],
+  stall: [2, 1, true], questboard: [1, 1, true], shopsign: [1, 1, true], silo: [2, 2, true], trough: [1, 1, true],
+  haybale: [1, 1, true], raceflag: [1, 1, true], appletree: [1, 1, true], beehive: [1, 1, true], decocrop: [1, 1, false],
 };
 
 export class Level {
@@ -96,16 +100,28 @@ export function makeObject(spec, id) {
   if (spec.kind === "tree") o.hp = 6;
   if (spec.kind === "rock") o.hp = spec.small ? 1 : 4;
   if (spec.kind === "stump") o.hp = 3;
+  if (spec.kind === "ore") o.hp = spec.ore === "moonstone" ? 5 : 3;
+  if (spec.kind === "arch") o.y -= 2;
   if (spec.kind === "weed" || spec.kind === "twig") o.hp = 1;
   return o;
 }
 
-export function createWorldLevel(data) {
-  const lv = new Level("world", data.w, data.h, true);
+/**
+ * An outdoor level from map data; `gates` are `[[tx, ty], to, { tx, ty, dir, enter }]`
+ * edge exits (enter: the direction you walk to take them).
+ */
+export function createOutdoorLevel(id, data, gates = []) {
+  const lv = new Level(id, data.w, data.h, true);
   lv.ground.set(data.ground);
   lv.wall.set(data.solid);
   data.objects.forEach((spec, i) => spec.skip || lv.add(makeObject(spec, i + 1)));
-  for (const b of BUILDING_SPOTS) {
+  for (const [tiles, to, at] of gates) for (const [x, y] of tiles) lv.doors.set(y * lv.w + x, { to, ...at });
+  return lv;
+}
+
+export function createWorldLevel(data, gates = []) {
+  const lv = createOutdoorLevel("world", data, gates);
+  for (const b of ALL_SPOTS) {
     if (!b.interior) continue;
     const st = BUILDINGS[b.style];
     const dx = b.tx + (st.w >> 1);
@@ -125,7 +141,7 @@ export function createInterior(id) {
     if (edge) lv.wall[y * r.w + x] = 1;
   }
   lv.wall[r.exit.ty * r.w + r.exit.tx] = 0;
-  const b = BUILDING_SPOTS.find((s) => s.interior === id);
+  const b = ALL_SPOTS.find((s) => s.interior === id);
   const st = BUILDINGS[b.style];
   lv.doors.set(r.exit.ty * r.w + r.exit.tx, { to: "world", tx: b.tx + (st.w >> 1), ty: b.ty + st.d, dir: "down", building: b.id });
   r.furniture.forEach(([name, tx, ty, o = {}], i) => {

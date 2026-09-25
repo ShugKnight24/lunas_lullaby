@@ -8,7 +8,7 @@
  */
 
 import { TILE } from "../config.js";
-import { GR, HIDDEN, BUILDING_SPOTS } from "../world/map.js";
+import { GR, HIDDEN, ALL_SPOTS } from "../world/map.js";
 import { BUILDINGS } from "../art/props.js";
 import { STRUCTURES } from "../data/structures.js";
 
@@ -22,6 +22,7 @@ const GROUND = {
   [GR.FIELD]: "#b98a5e",
   [GR.WOOD]: "#b07a4a",
   [GR.FOREST]: ["#5f9a64", "#6aa05a", "#9a8a4a", "#b8ccd4"],
+  [GR.MOSS]: ["#4a8452", "#478a4c", "#86763e", "#a8bcc6"],
 };
 const SETTINGS_KEY = "luna_minimap";
 
@@ -41,8 +42,9 @@ export function toggleMinimap() {
 const base = { canvas: null, key: "" };
 
 /** What the painted base depends on. */
-function baseKey(g) {
+function baseKey(g, lv) {
   const s = g.s;
+  if (lv.id !== "world") return `${lv.id}|${s.clock.season}|${lv.version}`;
   const found = HIDDEN.map((h) => (s.flags.found[h.id] ? 1 : 0)).join("");
   return `${s.clock.season}|${found}|${s.structures.length}:${s.uid}|${Object.keys(s.soil).length}`;
 }
@@ -65,6 +67,15 @@ function paintBase(g, lv) {
     if (o.kind === "tree" || o.kind === "bush") (ctx.fillStyle = "rgba(40,90,50,0.55)"), ctx.fillRect(o.tx, o.ty, 1, 1);
     else if (o.kind === "fence") (ctx.fillStyle = "#8a5a3a"), ctx.fillRect(o.tx, o.ty, 1, 1);
   }
+  if (lv.id !== "world") {
+    for (const o of lv.objects) {
+      if (o.kind !== "building") continue;
+      const st = BUILDINGS[o.style];
+      ctx.fillStyle = st.roof;
+      ctx.fillRect(o.tx, o.ty, st.w, st.d);
+    }
+    return;
+  }
   ctx.fillStyle = "#7a5238";
   for (const k in g.s.soil) ctx.fillRect(k % lv.w, Math.floor(k / lv.w), 1, 1);
   for (const st of g.s.structures) {
@@ -72,7 +83,7 @@ function paintBase(g, lv) {
     ctx.fillStyle = d.fence ? "#8a5a3a" : d.floor ? "#d4c8b8" : "#e8a25a";
     ctx.fillRect(st.tx, st.ty, d.w, d.h);
   }
-  for (const b of BUILDING_SPOTS) {
+  for (const b of ALL_SPOTS) {
     const st = BUILDINGS[b.style];
     ctx.fillStyle = st.roof;
     ctx.fillRect(b.tx, b.ty, st.w, st.d);
@@ -88,6 +99,9 @@ function paintBase(g, lv) {
       }
   }
 }
+
+/** The map shows whichever outdoor area you're in (or the valley, from indoors). */
+export const mapLevel = (g) => (g.lv.outdoor ? g.lv : g.levels.world);
 
 /** Screen rectangle and scale (px per tile) for the minimap. */
 export function minimapRect(view, hotbar, lv) {
@@ -115,8 +129,8 @@ const dot = (ctx, x, y, r, fill) => {
  */
 export function drawMinimap(ctx, g, t, rect, panel, target) {
   if (!visible) return;
-  const lv = g.levels.world;
-  const key = baseKey(g);
+  const lv = mapLevel(g);
+  const key = baseKey(g, lv);
   if (key !== base.key || !base.canvas) {
     paintBase(g, lv);
     base.key = key;
@@ -140,8 +154,9 @@ export function drawMinimap(ctx, g, t, rect, panel, target) {
     ctx.lineWidth = 1.5;
     ctx.strokeRect(sx(g.cam.x - vw / 2), sy(g.cam.y - vh / 2), (vw / TILE) * px, (vh / TILE) * px);
   }
-  for (const v of g.villagers) if (v.level === "world") dot(ctx, sx(v.x), sy(v.y), 2.6, v.def.look.top);
-  if (g.horse.level === "world" && !g.player.mounted) dot(ctx, sx(g.horse.x), sy(g.horse.y), 2.4, "#8a5a3a");
+  for (const v of g.villagers) if (v.level === lv.id) dot(ctx, sx(v.x), sy(v.y), 2.6, v.def.look.top);
+  if (lv.id === "wildwood") for (const e of g.enemies) if (e.alive) (ctx.fillStyle = e.def.boss ? "#e8566a" : "rgba(200,70,90,0.85)"), ctx.fillRect(sx(e.x) - 1.5, sy(e.y) - 1.5, 3, 3);
+  if (g.horse.level === lv.id && !g.player.mounted) dot(ctx, sx(g.horse.x), sy(g.horse.y), 2.4, "#8a5a3a");
   if (outdoors) dot(ctx, sx(g.pet.x), sy(g.pet.y), 2.2, "#f4ece0");
   if (target) {
     const tx = sx(target[0]);
@@ -161,7 +176,7 @@ export function drawMinimap(ctx, g, t, rect, panel, target) {
   // You: at your door when you're indoors, pulsing gently.
   let [ptx, pty] = [g.player.x, g.player.y];
   if (!outdoors) {
-    const spot = BUILDING_SPOTS.find((b) => b.interior === g.lv.id);
+    const spot = ALL_SPOTS.find((b) => b.interior === g.lv.id);
     if (spot) [ptx, pty] = [(spot.tx + BUILDINGS[spot.style].w / 2) * TILE, (spot.ty + BUILDINGS[spot.style].d) * TILE];
   }
   dot(ctx, sx(ptx), sy(pty), 3.4 + Math.sin(t * 4) * 0.6, "#e8566a");

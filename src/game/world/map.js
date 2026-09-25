@@ -8,7 +8,7 @@
 import { MAP_W as W, MAP_H as H } from "../config.js";
 import { SeededRNG } from "../../engine/seeded-rng.js";
 
-export const GR = { GRASS: 0, PATH: 1, PLAZA: 2, WATER: 3, SAND: 4, FIELD: 5, WOOD: 6, FOREST: 7 };
+export const GR = { GRASS: 0, PATH: 1, PLAZA: 2, WATER: 3, SAND: 4, FIELD: 5, WOOD: 6, FOREST: 7, MOSS: 8 };
 
 /** Farm area where tilling and building are allowed. */
 /** The farm: everything west of the east fence, down to the southern tree line. */
@@ -34,6 +34,21 @@ export const BUILDING_SPOTS = [
   { id: "cabin", style: "cabin", tx: 84, ty: 23, interior: "cabin" },
 ];
 
+/**
+ * Buildings added after the first saves. World object ids are list
+ * positions, so these are placed after generation (see addTown) instead of
+ * joining BUILDING_SPOTS, which would reshuffle the generator.
+ */
+export const TOWN_SPOTS = [
+  { id: "lodge", style: "lodge", tx: 65, ty: 19, interior: "lodge" },
+  { id: "store", style: "store", tx: 44, ty: 44, interior: "store" },
+  { id: "cottage_a", style: "cottage", tx: 37, ty: 44 },
+  { id: "cottage_b", style: "cottage2", tx: 56, ty: 44 },
+];
+/** Every building in town, with or without an interior. */
+export const ALL_SPOTS = [...BUILDING_SPOTS, ...TOWN_SPOTS];
+export const QUEST_BOARD = { tx: 47, ty: 31 };
+
 export const WAYPOINTS = {
   bakery_counter: { level: "bakery", tx: 7, ty: 3 },
   bakery_home: { level: "bakery", tx: 2, ty: 3 },
@@ -52,6 +67,22 @@ export const WAYPOINTS = {
   plaza_bench2: { level: "world", tx: 55, ty: 30 },
   plaza_market: { level: "world", tx: 51, ty: 37 },
   meadow_path: { level: "world", tx: 60, ty: 50 },
+  lodge_in: { level: "lodge", tx: 8, ty: 3 },
+  lodge_door: { level: "world", tx: 68, ty: 24 },
+  lodge_porch: { level: "world", tx: 66, ty: 25 },
+  wild_arch: { level: "world", tx: 53, ty: 4 },
+  store_in: { level: "store", tx: 7, ty: 3 },
+  store_door: { level: "world", tx: 47, ty: 49 },
+  store_stall: { level: "world", tx: 41, ty: 39 },
+  plaza_board: { level: "world", tx: 48, ty: 32 },
+  ranch_yard: { level: "sunridge", tx: 12, ty: 11 },
+  ranch_pasture: { level: "sunridge", tx: 16, ty: 20 },
+  ranch_barn: { level: "sunridge", tx: 20, ty: 11 },
+  ranch_sign: { level: "sunridge", tx: 11, ty: 12 },
+  orchard_rows: { level: "sunridge", tx: 51, ty: 20 },
+  orchard_hives: { level: "sunridge", tx: 52, ty: 31 },
+  orchard_stall: { level: "sunridge", tx: 39, ty: 16 },
+  willow_home: { level: "sunridge", tx: 47, ty: 10 },
 };
 
 export const PLAYER_START = { tx: 8, ty: 11 };
@@ -269,7 +300,40 @@ export function buildWorld(seed = 7) {
 
   addFarmWell(ground, objects, spots, idx);
   addSouthFence(objects);
+  addTown(ground, objects, spots, idx);
   return { w: W, h: H, ground, solid, objects, spots };
+}
+
+/**
+ * The bigger town, the Wildwood arch and the road south to Sunridge (all
+ * appended like the farm well): whatever the generator left in the way is
+ * flagged `skip` so every older id stays put.
+ */
+function addTown(ground, objects, spots, idx) {
+  const clear = [];
+  const area = (x0, y0, x1, y1) => clear.push([x0, y0, x1, y1]);
+  const path = (x0, y0, x1, y1) => {
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) ground[idx(x, y)] = GR.PATH;
+    area(x0, y0, x1, y1);
+  };
+  for (const b of TOWN_SPOTS) area(b.tx - 1, b.ty - 2, b.tx + (b.style.startsWith("cottage") ? 4 : 6), b.ty + (b.style.startsWith("cottage") ? 3 : 4));
+  path(68, 23, 68, 32); // lodge to the road
+  path(47, 48, 50, 48); // store to the meadow path
+  path(52, 1, 53, 2); // up to the Wildwood arch
+  path(51, 60, 52, 70); // down to Sunridge
+  area(39, 36, 42, 38);
+  area(60, 36, 63, 38);
+  area(QUEST_BOARD.tx, QUEST_BOARD.ty, QUEST_BOARD.tx, QUEST_BOARD.ty);
+  area(10, 32, 10, 32); // race flag
+  const hit = (x, y) => clear.some(([x0, y0, x1, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1);
+  for (const o of objects) if (hit(o.tx, o.ty) && o.kind !== "fence" && o.kind !== "lamp") o.skip = true;
+  for (let i = spots.length - 1; i >= 0; i--) if (hit(spots[i].tx, spots[i].ty)) spots.splice(i, 1);
+  for (const b of TOWN_SPOTS) objects.push({ kind: "building", tx: b.tx, ty: b.ty, id: b.id, style: b.style, interior: b.interior });
+  objects.push({ kind: "stall", tx: 40, ty: 37, w: 2, h: 1, color: "#6aa8d8", shop: "pip" });
+  objects.push({ kind: "stall", tx: 61, ty: 37, w: 2, h: 1, color: "#f0a050" });
+  objects.push({ kind: "questboard", tx: QUEST_BOARD.tx, ty: QUEST_BOARD.ty });
+  objects.push({ kind: "arch", tx: 52, ty: 2, w: 2, h: 1 });
+  objects.push({ kind: "raceflag", tx: 10, ty: 32, race: "hollow" });
 }
 
 /**
@@ -313,5 +377,15 @@ export const INTERIORS = {
     w: 8, h: 7, wall: "#c8dcec", trim: "#6a8aa8", floor: "#c8a078",
     exit: { tx: 4, ty: 6 }, spawn: { tx: 4, ty: 5 },
     furniture: [["bed", 1, 3, { w: 2, h: 2 }], ["plant", 6, 2], ["rug", 4, 5, { c: "#9ac8d8" }]],
+  },
+  lodge: {
+    w: 12, h: 9, wall: "#d8c4a4", trim: "#5a7a5a", floor: "#b08860",
+    exit: { tx: 6, ty: 8 }, spawn: { tx: 6, ty: 7 },
+    furniture: [["counter", 6, 4, { w: 4, shop: "hazel", bread: false }], ["fireplace", 2, 1, { w: 2 }], ["shelf", 9, 1], ["table", 2, 5], ["barrel", 10, 5], ["plant", 1, 7], ["rug", 6, 6, { c: "#9ab88a" }]],
+  },
+  store: {
+    w: 12, h: 9, wall: "#f4e8cc", trim: "#5a8ab0", floor: "#d8b088",
+    exit: { tx: 6, ty: 8 }, spawn: { tx: 6, ty: 7 },
+    furniture: [["counter", 5, 4, { w: 4, shop: "pip", bread: false }], ["shelf", 2, 1], ["shelf", 5, 1], ["shelf", 9, 1], ["barrel", 1, 4], ["barrel", 10, 4], ["plant", 10, 7], ["rug", 6, 6, { c: "#a8c8e8" }]],
   },
 };
