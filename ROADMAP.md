@@ -95,7 +95,25 @@ undefined energy" for non-food items.
 - **Performance.** Budget check on low device tiers (`engine/device-tier.js`)
   once schedules and more actors land.
 
-## Suggested next three tasks
+## Phase 5: the Wildwood and a living valley ✅
 
-1. Audio (Phase 4): procedural ambient music and tool SFX — the game is
-   silent, and it's the biggest remaining feel gap
+- **Wildwood** (`world/wildwood.js`): a second outdoor level behind the forest arch, four zones, chests, ore, herbs, ironwood, named places.
+- **Action combat** (`combat.js`, `actors/enemies.js`, `rules/combat.js`): sword swings and a charged spin, five creature kinds with their own state machines, a three-attack boss, hearts, hit-stop, shake, faint-and-wake-home.
+- **Companion RPG**: levels, health, hunger, feeding, three talents, fights beside you.
+- **Quests** (`data/quests.js`, `rules/quests.js`, `quests.js`): a five-part story from Hazel, five side quests, daily notice-board jobs, a HUD tracker.
+- **Town and Sunridge**: Warden's Lodge, Pip's General Store, cottages and stalls; Hawthorn Ranch and Willow's orchard with a grazing herd. Four new villagers (8 total).
+- **Careers** (`rules/careers.js`): five paths with ranks and perks; the Farm Stand sells overnight.
+- Save v10 migrates older saves; world object ids stay put (new content is appended, and `tests/unit/world.test.js` guards it).
+
+## Phase 6: feel and pastimes ✅
+
+- Combat feel pass: combo chain, lunge, sword smear drawn above the lighting grade, white hit flash and squash, impact stars, popping numbers, charge-lane telegraphs, moving while swinging; Space/click swing in the Wildwood.
+- Fetch (`fetch.js`), time-trial races (`race.js`, `data/races.js`), hearth cooking with day buffs (`data/cooking.js`, `rules/cooking.js`).
+- Starter quests for Farming, Building and Fishing; "how to train" on the Skills page.
+
+## Suggested next tasks
+
+1. **Buy animals at Hawthorn Ranch**: a barn, cows (milk) and sheep (wool), reusing the herd actors.
+2. ~~Armor and trinkets~~ done: five gear slots, 19 pieces, stat points (`rules/equipment.js`). Worn gear now shows on the player sprite, and the journal is a bound book with a self-writing diary (`rules/log.js`, `ui/journal-book.js`). Next: tool upgrades from iron ore (Phase 2.4).
+3. **A Wildwood dungeon**: seeded floors under the Moon Shrine once it's cleansed (Phase 3.4's mine, with combat already in place).
+4. **Open your own shop building** in town as the Merchant career's rank-5 reward, with customers who walk in.
